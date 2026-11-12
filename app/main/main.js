@@ -509,7 +509,7 @@ function quit() {
 }
 
 let agents = null;
-app.on('second-instance', () => { dlog('second-instance'); try { openSettings(); } catch (e) { errlog('openSettings', e); } });
+app.on('second-instance', (e, argv) => { dlog('second-instance'); if ((argv || []).some((a) => a.startsWith('--listen-test='))) return; try { openSettings(); } catch (err) { errlog('openSettings', err); } });
 app.on('window-all-closed', (e) => { /* keep running in tray */ });
 
 app.whenReady().then(() => {

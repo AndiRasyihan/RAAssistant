@@ -506,6 +506,12 @@
       group(L('Lokasi file', 'File locations'),
         item(L('Tangkapan layar', 'Screenshots'), L('Gambar\\Screenshots — juga disalin ke clipboard.', 'Pictures\\Screenshots — also copied to the clipboard.'), button(RA.t('common.open'), async () => { const p = await RA.invoke('paths'); RA.invoke('openPath', p.pictures + '\\Screenshots'); })),
         item(L('Rekaman', 'Recordings'), 'Videos\\Captures (MP4)', button(RA.t('common.open'), async () => { const p = await RA.invoke('paths'); RA.invoke('openPath', p.videos + '\\Captures'); }))
+      ),
+      group(L('Dengar (suara → teks)', 'Listen (speech → text)'),
+        item(L('Bahasa', 'Language'), L('Bahasa yang diucapkan. Bisa diganti juga di tab Dengar.', 'Spoken language. Also switchable in the Listen tab.'), seg('listen.lang', [['id', 'Indonesia'], ['en', 'English']]), { keywords: 'transkrip transcribe speech suara mic' }),
+        item(L('Sumber suara', 'Audio source'), L('Mikrofon untuk suara Anda; Audio sistem untuk mentranskripsi video, kuliah, atau rapat yang diputar di laptop.', 'Microphone for your voice; System audio to transcribe videos, lectures or meetings playing on the laptop.'), seg('listen.source', [['mic', L('Mikrofon', 'Microphone')], ['system', L('Audio sistem', 'System audio')]])),
+        item(L('Model', 'Model'), L('Diproses offline di laptop ini. Diunduh sekali saat pertama dipakai: Cepat ±40 MB, Seimbang ±80 MB (disarankan), Akurat ±250 MB (lebih berat). Mesin hanya berjalan selama mendengarkan (memakai ±0,6–1 GB RAM) dan berhenti sendiri setelah 2 menit tanpa suara.', 'Runs offline on this laptop, downloaded once on first use: Fast ~40 MB, Balanced ~80 MB (recommended), Accurate ~250 MB (heavier). The engine only runs while listening (~0.6–1 GB RAM) and stops by itself after 2 minutes of silence.'),
+          seg('listen.model', [['tiny', L('Cepat', 'Fast')], ['base', L('Seimbang', 'Balanced')], ['small', L('Akurat', 'Accurate')]]))
       )
     ];
   }

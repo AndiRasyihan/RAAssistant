@@ -82,7 +82,7 @@ module.exports = {
   },
   focus: { minutes: 25, breakMin: 5 },
   screen: { track: true },          // screen-time tracking (local only)
-  listen: { lang: 'id', model: 'base' }, // live speech-to-text (offline Whisper)
+  listen: { lang: 'id', model: 'base', source: 'mic' }, // live speech-to-text (offline Whisper); source: mic | system
   capture: {
     shortcut: 'CommandOrControl+Shift+S',
     hideFromCapture: true,
