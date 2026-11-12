@@ -14,6 +14,8 @@ app.commandLine.appendSwitch('disable-features', 'HardwareMediaKeyHandling,Media
 // SwiftShader (vk_swiftshader.dll) is unsigned and gets blocked by Smart App Control; never fall back to it.
 app.commandLine.appendSwitch('disable-software-rasterizer');
 app.commandLine.appendSwitch('use-angle', 'd3d11');
+// The island is mostly static UI; software compositing saves a whole GPU process (~100 MB).
+if (!process.argv.includes('--gpu')) app.disableHardwareAcceleration();
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
 if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
@@ -434,9 +436,17 @@ function startSystemHelper() {
   ctx.handle('mics', (mute) => sys.send({ c: 'mics', v: !!mute }));
   ctx.focusApp = (exe, title) => { sys.send({ c: 'focus', exe: exe.toLowerCase(), title: title || '' }); return { ok: true }; };
   ctx.uia = (req) => new Promise((resolve) => {
-    const t = setTimeout(() => resolve({ ok: false, error: 'timeout' }), 20000);
-    sys.once('uia', (m) => { clearTimeout(t); resolve((m.data && m.data[0]) || { ok: false }); });
-    sys.send({ c: 'uia', exe: req.exe, a: req.action, v: req.value, q: req.question || '' });
+    const { spawn } = require('child_process');
+    const p = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', path.join(ROOT, 'ps', 'uia.ps1')], { windowsHide: true });
+    let out = '';
+    const t = setTimeout(() => { try { p.kill(); } catch {} resolve({ ok: false, error: 'timeout' }); }, 20000);
+    p.stdout.on('data', (d) => { out += d; });
+    p.on('close', () => {
+      clearTimeout(t);
+      const line = out.split(/\r?\n/).find((l) => l.startsWith('{'));
+      try { resolve(JSON.parse(line)); } catch { resolve({ ok: false, error: 'no result' }); }
+    });
+    p.stdin.end(JSON.stringify(req));
   });
 }
 
