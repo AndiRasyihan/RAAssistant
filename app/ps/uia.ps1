@@ -44,6 +44,8 @@ try {
     $edits = @($all | Where-Object { ($_.Current.ControlType -eq $CT::Edit -or $_.Current.ControlType -eq $CT::Document) -and $_.Current.IsEnabled -and $_.Current.IsKeyboardFocusable -and -not $_.Current.IsOffscreen })
     # Prefer the free-form answer box of a pending question, else the message box.
     $ed = $edits | Where-Object { $_.Current.Name -match 'answer|jawab' } | Select-Object -Last 1
+    # A pending question must only be answered in its own box, never as a new chat message.
+    if (-not $ed -and ($req.action -eq 'choice' -or $req.question)) { return @{ ok = $false; error = 'answer box not found' } }
     if (-not $ed) { $ed = $edits | Where-Object { $_.Current.Name -match '^(Message|Pesan)' } | Select-Object -Last 1 }
     if (-not $ed) { $ed = $edits | Select-Object -Last 1 }
     if ($ed) {

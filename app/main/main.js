@@ -504,7 +504,10 @@ app.whenReady().then(() => {
     if (view.mode === 'fullscreen' || view.mode === 'hidden') ctx.osNotify(i18n.t('agents.doneNotif'), `${s.sourceLabel}: ${s.title}`);
   });
   bus.on('agent:waiting', (s) => {
-    ctx.toast({ kind: 'agent', title: `${s.sourceLabel} · ${i18n.t('agents.waitNotif')}`, body: s.question || s.title, tab: 'agents', urgent: true });
+    ctx.toast({
+      kind: 'agentq', key: s.key, source: s.source, product: s.product, sourceLabel: s.sourceLabel, title: s.title,
+      workspace: s.workspace, question: s.question || s.step || s.title, choices: s.choices || null, permission: !!s.permission, urgent: true
+    });
     if (view.mode === 'fullscreen' || view.mode === 'hidden') ctx.osNotify(i18n.t('agents.waitNotif'), `${s.sourceLabel}: ${s.question || s.title}`);
   });
   bus.on('activity', (on) => { view.activity = on; applyVisibility(); });

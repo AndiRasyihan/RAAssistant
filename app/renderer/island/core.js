@@ -139,7 +139,7 @@
     const isl = RA.$('#island');
     let w, h;
     if (RA.expanded) { w = 620; h = RA.paneHeight; }
-    else if (toastShowing) { w = 440; h = 64; }
+    else if (toastShowing) { w = toastShowing.w || 440; h = toastShowing.h || 64; }
     else if (document.body.classList.contains('osd')) { w = 300; h = 36; }
     else { w = RA.compactW || 210; h = 36; }
     isl.style.setProperty('--w', w + 'px');
@@ -180,6 +180,7 @@
     clearTimeout(hoverT); clearTimeout(leaveT);
     if (inside) {
       if (RA.mode === 'shrink' || RA.mode === 'peek') return; // main switches mode first
+      if (toastShowing && toastShowing.interactive) return; // let the user click the answer in place
       hoverT = setTimeout(() => RA.expand(true), 160);
     } else {
       leaveT = setTimeout(() => { if (!RA.pins && !RA.pointerInside) RA.expand(false); }, 450);
@@ -265,8 +266,19 @@
   RA.holding = () => RA.focusActive || RA.meetingActive;
   RA.toast = (item) => {
     if (RA.holding() && !item.urgent && !item.otp && !item.force) { RA.held.push(item); RA.refresh(); return; }
-    queue.push(item);
+    if (item.interactive) {
+      // Questions jump the queue and replace a plain toast that is currently showing.
+      for (let i = queue.length - 1; i >= 0; i--) if (queue[i].key && queue[i].key === item.key) queue.splice(i, 1);
+      queue.unshift(item);
+      if (toastShowing && !toastShowing.interactive) { queue.splice(1, 0, toastShowing); toastShowing._done(); return; }
+    } else queue.push(item);
     if (!toastShowing && !RA.expanded) nextToast();
+  };
+  RA.toastShowing = () => toastShowing;
+  // Drop a pending/visible question once the agent no longer waits for it.
+  RA.dropToast = (key) => {
+    for (let i = queue.length - 1; i >= 0; i--) if (queue[i].key === key) queue.splice(i, 1);
+    if (toastShowing && toastShowing.key === key) toastShowing._done();
   };
   // Toasts wait while the panel is open (they would cover it) and play once it collapses.
   RA.flushToasts = () => { if (!toastShowing && !RA.expanded && queue.length) nextToast(); };
@@ -275,13 +287,19 @@
     toastShowing = item || null;
     const box = RA.$('#toast');
     if (!item) { document.body.classList.remove('toasting'); sizeIsland(); return; }
-    const icon = item.image ? `<div class="ticon" style="background-image:url('${item.image}')"></div>` : `<div class="ticon">${item.emoji || icons[item.icon] || icons.reminders}</div>`;
-    const acts = (item.actions || []).map((a, i) => `<button class="btn ${a.pri ? 'pri' : ''} sm" data-i="${i}">${RA.esc(a.label)}</button>`).join('');
-    box.innerHTML = `${icon}<div class="tbody"><div class="ttitle">${RA.esc(item.title || '')}</div><div class="ttext">${RA.esc(item.body || '')}</div></div><div class="tact">${acts}</div>`;
-    box.querySelector('.ticon svg') && (box.querySelector('.ticon svg').style.cssText = 'width:20px;height:20px;fill:var(--accent)');
+    box.classList.toggle('q', !!item.html);
+    if (item.html) {
+      box.innerHTML = item.html;
+    } else {
+      const icon = item.image ? `<div class="ticon" style="background-image:url('${item.image}')"></div>` : `<div class="ticon">${item.emoji || icons[item.icon] || icons.reminders}</div>`;
+      const acts = (item.actions || []).map((a, i) => `<button class="btn ${a.pri ? 'pri' : ''} sm" data-i="${i}">${RA.esc(a.label)}</button>`).join('');
+      box.innerHTML = `${icon}<div class="tbody"><div class="ttitle">${RA.esc(item.title || '')}</div><div class="ttext">${RA.esc(item.body || '')}</div></div><div class="tact">${acts}</div>`;
+      box.querySelector('.ticon svg') && (box.querySelector('.ticon svg').style.cssText = 'width:20px;height:20px;fill:var(--accent)');
+    }
     box.onclick = (e) => {
-      const b = e.target.closest('button[data-i]');
-      if (b) { const a = item.actions[+b.dataset.i]; a.run && a.run(); }
+      const b = e.target.closest('[data-i]');
+      if (b) { const a = item.actions[+b.dataset.i]; if (a.run) a.run(); if (a.keep) return; }
+      else if (item.interactive) { if (!e.target.closest('[data-close]')) return; }
       else if (item.onClick) item.onClick();
       else if (item.tab) RA.expand(true, item.tab);
       done();
@@ -290,7 +308,7 @@
     sizeIsland();
     const ms = item.ms || (item.urgent ? 9000 : 5000);
     let t = setTimeout(done, ms);
-    function done() { clearTimeout(t); if (toastShowing !== item) return; nextToast(); }
+    function done() { clearTimeout(t); if (toastShowing !== item) return; if (item.interactive) window.ra.focus(false); nextToast(); }
     item._done = done;
   }
   RA.dismissToast = () => toastShowing && toastShowing._done && toastShowing._done();

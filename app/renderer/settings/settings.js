@@ -239,10 +239,13 @@
 
   function mascot() {
     const pv = document.createElement('div'); pv.className = 'mascot-preview';
-    pv.innerHTML = RA.mascotHtml('big') + `<div class="note">${L('Rara bereaksi: menari saat musik, mengantuk malam hari, marah saat baterai 10–20%, mata merah berkedip di bawah 10%, senyum hijau saat penuh, berkeringat saat CPU sibuk, melompat saat charger dicolok. Titik hijau = kamera aktif, oranye = mikrofon aktif.', 'Rara reacts: dances to music, sleepy at night, angry at 10–20% battery, blinking red below 10%, green smile when full, sweats on high CPU, hops when the charger is plugged in. Green dot = camera on, orange = mic on.')}</div>`;
+    pv.innerHTML = RA.mascotHtml('big') + `<div class="note">${L('Rara kini tampil sebagai sepasang mata agar ekspresinya tetap jelas di notch yang kecil. Ekspresi berganti otomatis: bergoyang saat musik, berpikir saat agen AI bekerja, bingung saat agen butuh jawaban, kaget saat notifikasi, mengantuk/tidur saat laptop diam atau larut malam, pusing/kepanasan saat CPU sibuk, sedih saat internet putus, marah saat baterai 10–20%, lemas (X merah) di bawah 10%, puas (hijau) saat penuh, fokus saat Pomodoro. Ikon kecil = kamera/mik dipakai atau baterai lemah.', 'Rara is now a pair of eyes so expressions stay readable in the small notch. Expressions change automatically: grooving with music, thinking while an AI agent works, puzzled when an agent needs an answer, surprised on notifications, sleepy/asleep when idle or late at night, overheated on high CPU, sad when offline, angry at 10–20% battery, drained (red X) below 10%, content (green) when full, focused during Pomodoro. Small icon = camera/mic in use or low battery.')}</div>`;
+    const gal = document.createElement('div'); gal.style.cssText = 'display:grid;grid-template-columns:repeat(6,1fr);gap:10px;padding:4px 16px 16px';
+    gal.innerHTML = Object.entries(RA.EXPRESSIONS).map(([k, n]) => `<div style="text-align:center;background:#0b0b0e;border-radius:12px;padding:10px 4px" title="${k}"><svg class="rae" data-fixed="${k}" viewBox="0 0 56 26" style="width:70px;height:33px"></svg><div class="note" style="margin-top:4px">${RA.esc(L(n[0], n[1]))}</div></div>`).join('');
     setTimeout(() => RA.applyMascot(), 0);
     return [
       group(L('Pratinjau', 'Preview'), item('', '', pv, { col: true })),
+      group(L('Ekspresi', 'Expressions'), item('', '', gal, { col: true, keywords: 'ekspresi expression mata eyes' })),
       group(L('Tampilan', 'Look'),
         item(L('Warna mata', 'Eye colour'), L('Merah & hijau dipakai untuk ekspresi baterai.', 'Red & green are reserved for battery expressions.'), swatches('mascot.eye', EYES, () => RA.applyMascot())),
         item(L('Aksesori', 'Accessory'), '', seg('mascot.accessory', [['none', L('Tanpa', 'None')], ['glasses', L('Kacamata', 'Glasses')], ['hat', L('Topi', 'Hat')], ['headphones', 'Headphone']], () => RA.applyMascot())),

@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --bg: #0b0b0e; --bg2: #17171c; --fg: #f3f3f6; --muted: #9a9aa6; --line: rgba(255,255,255,.08);
   --accent: #8b7cff; --cover: #8b7cff; --edge: transparent; --card: rgba(255,255,255,.055);
   --r: 22px; --ease: cubic-bezier(.32,.72,.24,1.02);
@@ -96,6 +96,19 @@ body.toasting #toast { opacity: 1; pointer-events: auto; }
 .btn.pri { background: var(--accent); color: #fff; }
 .btn.pri:hover { filter: brightness(1.1); }
 .btn.sm { padding: 3px 8px; font-size: 11px; }
+/* agent question drop-down (interactive toast) */
+#toast.q { display: block; padding: 12px 14px; }
+#toast.q .qhead { display: flex; gap: 9px; align-items: center; }
+#toast.q .qhead .src { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #fff; flex: 0 0 auto; }
+#toast.q .qtext { margin-top: 8px; font-size: 13px; font-weight: 550; line-height: 1.38; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+#toast.q .qopts { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; max-height: 210px; overflow-y: auto; overflow-x: hidden; }
+#toast.q .qopt { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; padding: 6px 9px; border-radius: 10px; background: var(--card); font-size: 12.5px; transition: background .12s, transform .12s; animation: qin .22s var(--ease) both; }
+#toast.q .qopt:nth-child(2) { animation-delay: .04s; } #toast.q .qopt:nth-child(3) { animation-delay: .08s; } #toast.q .qopt:nth-child(4) { animation-delay: .12s; } #toast.q .qopt:nth-child(5) { animation-delay: .16s; }
+#toast.q .qopt b { width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 25%, transparent); font-size: 11px; flex: 0 0 auto; }
+#toast.q .qopt span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#toast.q .qopt:hover { background: color-mix(in srgb, var(--accent) 30%, transparent); }
+#toast.q .qreply input { font-size: 12px; padding: 4px 8px; }
+@keyframes qin { from { opacity: 0; transform: translateY(-4px); } }
 .icon-btn { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; transition: background .15s; }
 .icon-btn:hover { background: var(--card); }
 .icon-btn svg { width: 18px; height: 18px; fill: currentColor; }
@@ -190,34 +203,35 @@ body.expanded #expanded { opacity: 1; pointer-events: auto; transition-delay: .1
 .weather { display: flex; align-items: center; gap: 8px; }
 .weather .temp { font-size: 22px; font-weight: 700; }
 
-/* ------------------------------------------------------------- mascot */
-.mascot { width: 26px; height: 26px; flex: 0 0 auto; overflow: visible; }
-.mascot.big { width: 110px; height: 110px; }
-.m-body { fill: #f2efff; } .m-cheek { fill: #ffb4c8; opacity: .8; } .m-sprout { fill: #7ee2a8; }
-.m-eye { fill: var(--eye, #5eead4); transform-box: fill-box; transform-origin: center; animation: blink 5s infinite; }
-.m-eyes { transition: transform .35s var(--ease); }
-.m-mouth { fill: none; stroke: #2b2440; stroke-width: 1.6; stroke-linecap: round; }
-.m-acc, .m-hold, .m-brow, .m-zz, .m-sweat { display: none; }
-.mascot.acc-glasses .acc-glasses, .mascot.acc-hat .acc-hat, .mascot.acc-headphones .acc-headphones { display: inline; }
-.mascot.hold-camera .hold-camera, .mascot.hold-mic .hold-mic, .mascot.hold-charger .hold-charger { display: inline; }
+/* ------------------------------------------------------------- mascot (eyes only) */
+.rae { width: 46px; height: 22px; flex: 0 0 auto; overflow: visible; --ec: #5eead4; }
+.rae.big { width: 176px; height: 82px; }
+.rae .ey, .rae .dots circle, .rae .note, .rae .qm, .rae .zz { fill: var(--ec); }
+.rae .ln { fill: none; stroke: var(--ec); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.rae .hl { fill: #fff; opacity: .85; }
+.rae .eyes-g { transition: transform .35s var(--ease); }
+.rae .bl, .rae .blf, .rae .spn, .rae .pulse, .rae .blx { transform-box: fill-box; transform-origin: center; }
+.rae .bl { animation: blink 5s infinite; }
+.rae .blf { animation: blinkfast .9s infinite; }
 @keyframes blink { 0%, 94%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
-.mascot.m-dance { animation: dance .5s ease-in-out infinite alternate; transform-origin: 50% 90%; }
-@keyframes dance { from { transform: rotate(-7deg) translateY(0); } to { transform: rotate(7deg) translateY(-1.5px); } }
-.mascot.m-sleepy .m-eye { animation: none; transform: scaleY(.18); } .mascot.m-sleepy .m-zz { display: inline; animation: zz 2.4s infinite; }
-@keyframes zz { 0% { opacity: 0; transform: translate(0, 0); } 50% { opacity: 1; } 100% { opacity: 0; transform: translate(4px, -6px); } }
-.mascot.m-angry { --eye: #ef4444 !important; } .mascot.m-angry .m-brow { display: inline; }
-.mascot.m-critical { --eye: #ef4444 !important; } .mascot.m-critical .m-eye { animation: redblink .6s infinite; }
-@keyframes redblink { 50% { opacity: .15; } }
-.mascot.m-full { --eye: #22c55e !important; }
-.mascot.m-hot .m-body { fill: #ffd2c2; } .mascot.m-hot .m-sweat { display: inline; animation: sweat 1.4s infinite; }
-@keyframes sweat { from { transform: translateY(0); opacity: 1; } to { transform: translateY(5px); opacity: 0; } }
-.mascot.m-plug { animation: hop .4s 3; transform-origin: 50% 100%; }
-@keyframes hop { 50% { transform: translateY(-3px) scale(1.05); } }
-.mascot.paused, .mascot.paused * { animation-play-state: paused !important; }
-.mascot.m-blinkfast .m-eye { animation: blinkfast .9s infinite; }
 @keyframes blinkfast { 0%, 60%, 100% { transform: scaleY(1); } 75% { transform: scaleY(.08); } }
-.mascot.m-far .m-eyes { transform: scale(.85) !important; transform-origin: 32px 30px; }
-
+.rae .spn { animation: spin 1.4s linear infinite; }
+.rae .pulse { animation: pulse2 .9s ease-in-out infinite; }
+@keyframes pulse2 { 50% { transform: scale(1.18); } }
+.rae .blx { animation: redblink .6s infinite; }
+@keyframes redblink { 50% { opacity: .15; } }
+.rae .bob { animation: bob .5s ease-in-out infinite alternate; }
+@keyframes bob { from { transform: translateY(1px) rotate(-3deg); } to { transform: translateY(-1.5px) rotate(3deg); } }
+.rae .zz { opacity: .8; animation: zz 2.4s infinite; } .rae .z2 { animation-delay: .8s; }
+@keyframes zz { 0% { opacity: 0; transform: translate(0, 0); } 50% { opacity: 1; } 100% { opacity: 0; transform: translate(3px, -4px); } }
+.rae .dots circle { animation: dot 1.2s infinite; opacity: .3; } .rae .dots circle:nth-child(2) { animation-delay: .2s; } .rae .dots circle:nth-child(3) { animation-delay: .4s; }
+@keyframes dot { 30% { opacity: 1; } }
+.rae .note { animation: note 1s ease-in-out infinite alternate; } @keyframes note { to { transform: translateY(-2px); } }
+.rae .qm { animation: pulse2 1.2s infinite; transform-box: fill-box; transform-origin: center; }
+.rae .sweat, .rae .tear { fill: #7dd3fc; animation: sweat 1.4s infinite; }
+@keyframes sweat { from { transform: translateY(0); opacity: 1; } to { transform: translateY(4px); opacity: 0; } }
+.rae .stars path { fill: #fbbf24; transform-box: fill-box; transform-origin: center; animation: spin 1.6s linear infinite; }
+.rae .acc { stroke: var(--fg); } .rae .acc2 { fill: var(--accent); }
 /* eye exercise / idle stage */
 .stage-mascot { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 8px; }
 

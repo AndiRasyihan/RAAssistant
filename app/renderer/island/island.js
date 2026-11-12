@@ -58,7 +58,9 @@
   RA.on('brightness', (v) => RA.osd('sun', v.v / 100));
   RA.on('caps', (v) => RA.osd('caps', null, v.on ? RA.t('osd.capsOn') : RA.t('osd.capsOff')));
   RA.on('toast', (item) => {
-    if (!item || !item.title) return;
+    if (!item || (!item.title && item.kind !== 'agentq')) return;
+    if (item.kind === 'agentq') { RA.questionToast(item); RA.mascot.flash('surprised', 1400); return; }
+    RA.mascot.flash(item.kind === 'agent' ? 'love' : item.kind === 'drink' ? 'wink' : 'surprised', 1600);
     const it = { ...item };
     if (it.kind === 'notif') {
       it.onClick = () => RA.invoke('notif.open', it.aumid, it.launch);
