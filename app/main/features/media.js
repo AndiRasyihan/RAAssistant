@@ -47,7 +47,7 @@ exports.init = (ctx) => {
   const cacheDir = path.join(ctx.paths.cache, 'lyrics');
   fs.mkdirSync(cacheDir, { recursive: true });
   let media = null;
-  let lyricsKey = '';
+  let lyricsKey = '', lyricsDur = 0;
 
   function keyOf(m) { return `${(m.artist || '').toLowerCase()}|${(m.title || '').toLowerCase()}`; }
 
@@ -61,7 +61,7 @@ exports.init = (ctx) => {
   async function fetchLyrics(m, key) {
     const file = path.join(cacheDir, crypto.createHash('sha1').update(key).digest('hex') + '.json');
     const skip = ctx.data.get('lyricSkip')[key] || [];
-    if (!skip.length) { try { const c = JSON.parse(fs.readFileSync(file, 'utf8')); if (c && c.lines) return c; } catch {} }
+    if (!skip.length) { try { const c = JSON.parse(fs.readFileSync(file, 'utf8')); if (c && c.lines && c.lines.length) return c; } catch {} }
     const base = `track_name=${encodeURIComponent(m.title)}&artist_name=${encodeURIComponent(m.artist || '')}`;
     let candidates = [];
     try {
@@ -83,15 +83,21 @@ exports.init = (ctx) => {
     } catch (e) { return { lines: [], error: String(e.message || e) }; }
     const best = candidates.find((x) => !skip.includes(x.id));
     const res = best ? { id: best.id, lines: parseLrc(best.syncedLyrics) } : { id: null, lines: [] };
-    try { fs.writeFileSync(file, JSON.stringify(res)); } catch {}
+    // Misses are not cached: browsers often report the previous video's duration at first.
+    if (res.lines.length) try { fs.writeFileSync(file, JSON.stringify(res)); } catch {}
     return res;
   }
 
   async function loadLyrics(force) {
     if (!media || !media.title) return;
     const key = keyOf(media);
-    if (key === lyricsKey && !force) return;
+    if (key === lyricsKey && !force) {
+      // Retry a miss once the player settles on a different duration (browsers update it late).
+      const cur = ctx.getState('lyrics');
+      if (!(cur && cur.status === 'none' && Math.abs(media.dur - lyricsDur) > 2)) return;
+    }
     lyricsKey = key;
+    lyricsDur = media.dur;
     if (!ctx.settings().music.lyrics) { ctx.state('lyrics', { key, status: 'off', lines: [] }); return; }
     ctx.state('lyrics', { key, status: 'loading', lines: [] });
     const r = await fetchLyrics(media, key);
