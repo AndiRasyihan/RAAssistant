@@ -125,10 +125,10 @@ function createIsland() {
   island.setIgnoreMouseEvents(true, { forward: true });
   island.setContentProtection(!!settings.get('capture.hideFromCapture'));
   island.loadFile(path.join(ROOT, 'renderer', 'island', 'island.html'));
-  island.once('ready-to-show', () => { placeIsland(); applyVisibility(true); });
+  island.once('ready-to-show', () => { placeIsland(); island.showInactive(); applyVisibility(true); });
   island.on('blur', () => island.webContents.send('ra:blur'));
   // Re-assert topmost occasionally; some fullscreen apps steal it.
-  setInterval(() => { if (island && island.isVisible()) island.setAlwaysOnTop(true, 'screen-saver'); }, 15000);
+  setInterval(() => { if (island && !softHidden) island.setAlwaysOnTop(true, 'screen-saver'); }, 15000);
 }
 
 function openSettings(section) {
@@ -208,10 +208,21 @@ function applyVisibility(force) {
   view.mode = mode;
   ctx.state('layout', { mode });
   const hide = mode === 'hidden' || mode === 'fullscreen';
-  if (hide && island.isVisible()) island.hide();
-  if (!hide && !island.isVisible()) { island.showInactive(); island.setAlwaysOnTop(true, 'screen-saver'); }
+  softHide(hide);
   updateLyricsOverlay();
 }
+
+// hide()/show() on this transparent window breaks click delivery afterwards, so "hiding" is done by
+// making it fully transparent and click-through instead.
+let softHidden = false;
+function softHide(on) {
+  if (!island || on === softHidden) return;
+  softHidden = on;
+  island.setOpacity(on ? 0 : 1);
+  if (on) { pointerInside = false; island.setIgnoreMouseEvents(true); }
+  else { island.setAlwaysOnTop(true, 'screen-saver'); island.setIgnoreMouseEvents(true, { forward: true }); }
+}
+ctx.islandHidden = () => softHidden;
 
 // Lyrics stay on top over borderless-fullscreen games (click-through window).
 function updateLyricsOverlay() {
@@ -321,7 +332,7 @@ function applyIgnore() {
   if (pointerInside) island.setIgnoreMouseEvents(false); else island.setIgnoreMouseEvents(true, { forward: true });
 }
 function pollCursor() {
-  if (!island || !island.isVisible()) return;
+  if (!island || !island.isVisible() || softHidden) return;
   const p = screen.getCursorScreenPoint();
   const b = island.getBounds();
   const x = p.x - b.x, y = p.y - b.y;
@@ -396,6 +407,7 @@ function startSystemHelper() {
   sys.on('mics', (m) => bus.emit('mics', m));
   sys.on('netcat', (m) => bus.emit('netcat', m));
   sys.on('bt', (m) => bus.emit('bt', m));
+  sys.on('clip', (m) => bus.emit('clip', m));
   sys.on('stderr', (s) => { dlog('[sys]', s); });
   sys.start();
   ctx.handle('media', (a, v) => sys.send({ c: 'media', a, v }));
@@ -452,7 +464,7 @@ app.whenReady().then(() => {
   if (settings.get('firstRun')) {
     ensureShortcuts();
     settings.set('firstRun', false);
-    openSettings('general');
+    openSettings('today');
   }
   screen.on('display-metrics-changed', placeIsland);
   screen.on('display-added', placeIsland);
