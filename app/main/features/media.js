@@ -23,7 +23,24 @@ function parseLrc(text) {
 }
 
 function clean(title) {
-  return String(title || '').replace(/\s*[([].*?(remaster|live|version|feat\.|ft\.|official|lyric|audio|video|mv).*?[)\]]/gi, '').replace(/\s+-\s+(remaster(ed)?|live|radio edit).*$/i, '').trim();
+  return String(title || '')
+    .replace(/\s*[([【].*?(remaster|live|version|feat\.|ft\.|official|lyric|lirik|audio|video|mv|m\/v|visuali[sz]er|hd|4k).*?[)\]】]/gi, '')
+    .replace(/\s*\|.*$/, '')
+    .replace(/\s+-\s+(remaster(ed)?|live|radio edit).*$/i, '')
+    .replace(/\s+(ft|feat)\.?\s.*$/i, '')
+    .replace(/[“”"]/g, '')
+    .trim();
+}
+
+// Browsers (YouTube, SoundCloud…) report "Artist - Title (Official Video)" with the channel as artist.
+function queries(m) {
+  const out = [];
+  const add = (artist, title) => { title = clean(title); artist = String(artist || '').replace(/\s*-\s*Topic$/i, '').replace(/VEVO$/i, '').trim(); if (title && !out.some((q) => q.t === title && q.a === artist)) out.push({ a: artist, t: title }); };
+  add(m.artist, m.title);
+  const split = String(m.title || '').match(/^(.+?)\s+[-–—]\s+(.+)$/);
+  if (split) { add(split[1], split[2]); add(split[2], split[1]); }
+  add('', m.title);
+  return out.slice(0, 4);
 }
 
 exports.init = (ctx) => {
@@ -53,10 +70,15 @@ exports.init = (ctx) => {
         if (g && g.syncedLyrics) candidates.push(g);
       }
       if (!candidates.length) {
-        const s1 = await getJson(`https://lrclib.net/api/search?${base}`) || [];
-        const s2 = clean(m.title) !== m.title ? await getJson(`https://lrclib.net/api/search?track_name=${encodeURIComponent(clean(m.title))}&artist_name=${encodeURIComponent(m.artist || '')}`) || [] : [];
-        candidates = [...s1, ...s2].filter((x) => x.syncedLyrics && !skip.includes(x.id));
+        for (const q of queries(m)) {
+          const url = `https://lrclib.net/api/search?track_name=${encodeURIComponent(q.t)}${q.a ? '&artist_name=' + encodeURIComponent(q.a) : ''}`;
+          const found = ((await getJson(url)) || []).filter((x) => x.syncedLyrics && !skip.includes(x.id));
+          candidates.push(...found);
+          if (found.length) break;
+        }
         if (m.dur) candidates.sort((a, b) => Math.abs((a.duration || 0) - m.dur) - Math.abs((b.duration || 0) - m.dur));
+        // A browser's media duration can be off; reject matches that clearly belong to another song.
+        if (m.dur) candidates = candidates.filter((x) => !x.duration || Math.abs(x.duration - m.dur) < 20);
       }
     } catch (e) { return { lines: [], error: String(e.message || e) }; }
     const best = candidates.find((x) => !skip.includes(x.id));

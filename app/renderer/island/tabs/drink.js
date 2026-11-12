@@ -26,7 +26,7 @@
     render(p) {
       pane = p;
       p.addEventListener('click', (e) => {
-        const d = e.target.closest('[data-d]'); if (d) RA.invoke('drink.add', +d.dataset.d);
+        const d = e.target.closest('[data-d]'); if (d) { RA.invoke('drink.add', +d.dataset.d); if (+d.dataset.d > 0) RA.mascot.flash('happy', 1500); }
         if (e.target.closest('[data-toggle]')) RA.set('health.drink.enabled', !st.enabled);
         if (e.target.closest('[data-eye]')) RA.eyeBreak();
       });

@@ -49,6 +49,10 @@ Menampilkan apa yang sedang dikerjakan agen AI: langkah/tool saat ini, pesan ter
 (Bekerja / Menunggu Anda / Selesai / Gagal), dan lama berjalan. Island menampilkan pil saat agen bekerja atau butuh
 input, dan memberi tahu saat agen selesai.
 
+Saat agen **bertanya**, kartu jawaban langsung turun dari notch (tanpa perlu membuka panel): pilihan A/B/C bisa
+diklik, ada kotak **Jawaban lain…**, atau **Izinkan / Tolak** untuk permintaan izin. Kartu hilang sendiri setelah
+pertanyaan terjawab (di island maupun di aplikasinya). Jika gagal terkirim, kartu muncul lagi dengan pesan kesalahan.
+
 | Sumber | Cara membaca status | Menjawab dari island |
 | --- | --- | --- |
 | GitHub Copilot app & Copilot CLI | Memantau `%USERPROFILE%\.copilot\session-state\<id>\events.jsonl` | Pilihan `ask_user` & izin: tombol di island menekan tombol yang sama di aplikasi Copilot lewat UI Automation (**eksperimental** — sesi tsb harus sedang tampil di aplikasi Copilot) |
@@ -76,6 +80,8 @@ Perintah `RA Agent Bridge: Show status` di editor menampilkan status koneksi.
 
 - **Musik**: lagu yang diputar dari Spotify/YouTube/pemutar apa pun (Windows media session), kontrol, lirik tersinkron
   dari LRCLIB (offset per lagu & tandai lirik salah), lirik tetap di atas game borderless/fullscreen (klik-tembus).
+  Lirik **tidak hanya untuk Spotify**: judul ala YouTube ("Artis - Judul (Official Video)", "- Topic", VEVO, dll.)
+  dibersihkan dulu agar cocok. Lirik hanya tampil jika lagunya ada di LRCLIB.
 - **OSD**: volume, kecerahan, Caps Lock di island.
 - **Notifikasi**: notifikasi Windows tampil ringkas di island (klik membuka aplikasi), kode OTP bisa disalin sekali
   klik (tidak masuk riwayat clipboard).
@@ -101,9 +107,11 @@ Perintah `RA Agent Bridge: Show status` di editor menampilkan status koneksi.
 - **Tampilan**: pil mengambang atau notch, 5 tema (Grafit, Embun, Laguna, Warna Sampul, Pendar Sampul), warna aksen,
   ukuran 75–130%, pilih monitor, mengecil otomatis di atas jendela maksimal, sembunyi di aplikasi layar penuh,
   Bahasa Indonesia / English tanpa restart.
-- **Maskot Rara**: menari saat musik, mengantuk malam hari, marah saat baterai 10–20%, merah berkedip <10%, senyum
-  hijau saat penuh, berkeringat saat CPU sibuk, memegang kamera/mik/charger, aksesori (kacamata/topi/headphone),
-  mata santai atau mengikuti kursor.
+- **Maskot Rara** (sepasang mata, agar jelas di notch kecil): 17 ekspresi — biasa, senang, mengedip, suka, kaget,
+  berpikir (agen bekerja), bingung (agen bertanya), fokus (Pomodoro), bergoyang (musik), mengantuk, tidur (laptop
+  diam/larut malam), pusing & kepanasan (CPU sibuk), sedih (internet putus), marah (baterai 10–20%), lemas (<10%),
+  puas (baterai penuh). Ikon kecil kamera/mik/charger, aksesori (kacamata/topi/headphone), mata santai atau
+  mengikuti kursor. Galeri ekspresi ada di *Pengaturan → Maskot*.
 
 ## Ringan & efisien
 

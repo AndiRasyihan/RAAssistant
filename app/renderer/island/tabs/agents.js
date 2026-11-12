@@ -86,7 +86,52 @@
     onShow: render
   });
 
-  RA.on('agents', (v) => { list = v.list || []; ext = v.ext || {}; render(); RA.refresh(); });
+  RA.on('agents', (v) => {
+    list = v.list || []; ext = v.ext || {}; render(); RA.refresh();
+    // Close question pop-ups that were answered elsewhere (or here).
+    const t = RA.toastShowing && RA.toastShowing();
+    if (t && t.kind === 'agentq') { const s = list.find((x) => x.key === t.key); if (!s || s.status !== 'waiting') RA.dropToast(t.key); }
+  });
+
+  // Agent question shown as a drop-down card right under the notch: answer without opening the panel.
+  RA.questionToast = (q) => {
+    const letters = 'ABCDEFGHIJ';
+    const ext2 = ext || {};
+    const canApprove = q.permission || (q.source === 'vscode' && ext2.vscode) || (q.source === 'antigravity' && q.product === 'ide' && ext2.antigravity);
+    const choices = q.choices && q.choices.length ? q.choices : null;
+    const actions = [];
+    let body = '';
+    if (choices) {
+      body = `<div class="qopts">${choices.map((c, i) => { actions.push({ run: () => answer('choice', c) }); return `<button class="qopt" data-i="${i}"><b>${letters[i] || '•'}</b><span>${RA.esc(c)}</span></button>`; }).join('')}</div>`;
+    } else if (canApprove) {
+      actions.push({ run: () => answer('allow') }, { run: () => answer('deny') });
+      body = `<div class="row" style="gap:6px;margin-top:8px"><button class="btn pri" data-i="0">✓ ${RA.L('Izinkan', 'Allow')}</button><button class="btn" data-i="1">✕ ${RA.L('Tolak', 'Deny')}</button></div>`;
+    }
+    const replyIdx = actions.length;
+    actions.push({ keep: true, run: () => { const i = RA.$('#toast .qreply input'); const v = i && i.value.trim(); if (v) { answer('reply', v); RA.dismissToast(); } } });
+    const openIdx = actions.length;
+    actions.push({ run: () => RA.invoke('agents.act', q.key, { type: 'open' }) });
+    const reply = `<div class="row qreply" style="margin-top:8px"><input class="grow" placeholder="${RA.L('Jawaban lain…', 'Other answer…')}"><button class="btn sm pri" data-i="${replyIdx}">↵</button></div>`;
+    const html = `<div class="qhead"><div class="src ${q.source}">${short[q.source] || '?'}</div>
+        <div class="grow" style="min-width:0"><div class="ttitle ell">${RA.esc(q.sourceLabel)} · ${RA.esc(RA.t('agents.waitNotif'))}</div><div class="small muted ell">${RA.esc(q.title || '')}${q.workspace ? ' · ' + RA.esc(q.workspace) : ''}</div></div>
+        <button class="btn sm" data-i="${openIdx}">${RA.L('Buka', 'Open')}</button><button class="icon-btn" data-close style="width:24px;height:24px">${RA.icons.x}</button></div>
+      <div class="qtext">${RA.esc(q.question || '')}</div>${q.error ? `<div class="small" style="color:#ff8a80;margin-top:4px">${RA.esc(RA.L('Gagal: ', 'Failed: ') + q.error)}</div>` : ''}${body}${reply}`;
+    const n = choices ? choices.length : 0;
+    const qlines = Math.min(3, Math.ceil((q.question || '').length / 60));
+    const h = 62 + qlines * 18 + (q.error ? 34 : 0) + (choices ? n * 34 + 6 : canApprove ? 42 : 0) + 40;
+    async function answer(type, value) {
+      const r = await RA.invoke('agents.act', q.key, { type, value });
+      if (r && r.error) RA.questionToast({ ...q, error: r.error });
+      else RA.mascot.flash && RA.mascot.flash('happy', 1500);
+    }
+    RA.toast({ ...q, kind: 'agentq', interactive: true, html, actions, w: 460, h: Math.min(h, 360), ms: 10 * 60000 });
+    setTimeout(() => {
+      const i = RA.$('#toast .qreply input');
+      if (!i) return;
+      i.addEventListener('mousedown', () => window.ra.focus(true));
+      i.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); actions[replyIdx].run(); } });
+    }, 0);
+  };
 
   // Island pill while an agent works or needs input.
   RA.activity('agents', () => {
