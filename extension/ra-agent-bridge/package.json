@@ -1,18 +1,35 @@
 {
-  "name": "ra-agent-bridge",
-  "displayName": "RA Agent Bridge",
-  "description": "Reports AI agent activity (Copilot Chat agent mode, Antigravity agent) to RA Assistant on this PC and lets you answer the agent from the RA island.",
-  "publisher": "ra-assistant",
-  "version": "0.1.0",
-  "license": "UNLICENSED",
-  "engines": { "vscode": "^1.80.0" },
-  "categories": ["Other"],
-  "main": "./extension.js",
-  "activationEvents": ["onStartupFinished"],
-  "extensionKind": ["ui"],
-  "contributes": {
-    "commands": [
-      { "command": "raBridge.status", "title": "RA Agent Bridge: Show status" }
-    ]
-  }
+    "name":  "ra-agent-bridge",
+    "displayName":  "RA Agent Bridge",
+    "description":  "Reports AI agent activity (Copilot Chat agent mode, Antigravity agent) to RA Assistant on this PC and lets you answer the agent from the RA island.",
+    "publisher":  "ra-assistant",
+    "version":  "0.1.1",
+    "license":  "UNLICENSED",
+    "engines":  {
+                    "vscode":  "^1.80.0"
+                },
+    "categories":  [
+                       "Other"
+                   ],
+    "main":  "./extension.js",
+    "activationEvents":  [
+                             "onStartupFinished"
+                         ],
+    "extensionKind":  [
+                          "ui"
+                      ],
+    "capabilities":  {
+                         "untrustedWorkspaces":  {
+                                                     "supported":  true
+                                                 },
+                         "virtualWorkspaces":  true
+                     },
+    "contributes":  {
+                        "commands":  [
+                                         {
+                                             "command":  "raBridge.status",
+                                             "title":  "RA Agent Bridge: Show status"
+                                         }
+                                     ]
+                    }
 }
