@@ -13,6 +13,7 @@
         <button class="btn grow ${rec.on ? 'pri' : ''}" data-c="rec" style="padding:14px">${rec.on ? '⏹️<br>' + RA.t('capture.stop') : '🔴<br>' + RA.t('capture.record')}</button>
       </div>
       <div class="row small" style="gap:8px"><label class="row" style="gap:6px;cursor:pointer"><input type="checkbox" data-mic ${RA.S.capture.recordMic ? 'checked' : ''} style="accent-color:var(--accent)"> 🎙️ ${RA.L('Rekam mikrofon', 'Record microphone')}</label>
+        <label class="row" style="gap:6px;cursor:pointer"><input type="checkbox" data-incl ${RA.S.capture.hideFromCapture ? '' : 'checked'} style="accent-color:var(--accent)"> 🏝️ ${RA.L('Ikutkan notch', 'Include notch')}</label>
         <span class="grow"></span><span class="muted">${RA.L('Pintasan', 'Shortcut')}: <b>${RA.esc(sc)}</b></span></div>
       <div class="row small" style="margin-top:10px;gap:8px">
         ${last ? `<img src="${last.url}" style="height:54px;border-radius:8px;cursor:pointer" data-open="${RA.esc(last.file)}">` : ''}
@@ -37,7 +38,10 @@
         if (f) { const ps = await RA.invoke('paths'); RA.invoke('openPath', f.dataset.folder === 'shots' ? ps.pictures + '\\Screenshots' : ps.videos + '\\Captures'); }
         const o = e.target.closest('[data-open]'); if (o) RA.invoke('showItem', o.dataset.open);
       });
-      p.addEventListener('change', (e) => { if (e.target.matches('[data-mic]')) RA.set('capture.recordMic', e.target.checked); });
+      p.addEventListener('change', (e) => {
+        if (e.target.matches('[data-mic]')) RA.set('capture.recordMic', e.target.checked);
+        if (e.target.matches('[data-incl]')) RA.set('capture.hideFromCapture', !e.target.checked);
+      });
       render();
     },
     onShow: render

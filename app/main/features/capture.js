@@ -17,16 +17,19 @@ exports.init = (ctx) => {
   function displayForCursor() { return screen.getDisplayNearestPoint(screen.getCursorScreenPoint()); }
 
   async function grab(display) {
-    // Keep our own windows out of the shot without hiding them (hide/show breaks click delivery).
-    const wins = BrowserWindow.getAllWindows().filter((w) => !w.isDestroyed());
-    const exclude = !S().capture.hideFromCapture;
-    if (exclude) { for (const w of wins) w.setContentProtection(true); await new Promise((r) => setTimeout(r, 120)); }
+    // RA's helper windows (settings, overlays…) never belong in a shot; the island, lyrics overlay and
+    // timer pill follow the "hide from capture" setting (already applied as content protection).
+    const overlays = (ctx.overlays ? ctx.overlays() : []).filter(Boolean);
+    const wins = BrowserWindow.getAllWindows().filter((w) => !w.isDestroyed() && !overlays.includes(w));
+    for (const w of wins) w.setContentProtection(true);
+    // Give a just-clicked island time to collapse back to its compact look.
+    await new Promise((r) => setTimeout(r, S().capture.hideFromCapture ? 120 : 480));
     try {
       const size = { width: Math.round(display.size.width * display.scaleFactor), height: Math.round(display.size.height * display.scaleFactor) };
       const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: size });
       const src = sources.find((s) => s.display_id === String(display.id)) || sources[0];
       return src ? src.thumbnail : null;
-    } finally { if (exclude) for (const w of wins) if (!w.isDestroyed()) w.setContentProtection(false); }
+    } finally { for (const w of wins) if (!w.isDestroyed()) w.setContentProtection(false); }
   }
 
   function saveImage(img) {
@@ -122,7 +125,8 @@ exports.init = (ctx) => {
   ctx.handle('capture.full', () => setTimeout(full, 250));   // let the island collapse first
   ctx.handle('capture.area', () => setTimeout(() => area().catch(() => {}), 250));
   ctx.handle('capture.record', (on) => (on ? startRecording() : stopRecording()));
-  ctx.bus.on('capture:shortcut', () => { if (recording) stopRecording(); else ctx.state('cmd', { cmd: 'capture', at: Date.now() }); });
-  ctx.bus.on('capture:menu', () => ctx.state('cmd', { cmd: 'capture', at: Date.now() }));
+  const openMenu = () => { ctx.reveal && ctx.reveal(4500); ctx.state('cmd', { cmd: 'capture', at: Date.now() }); };
+  ctx.bus.on('capture:shortcut', () => { if (recording) stopRecording(); else openMenu(); });
+  ctx.bus.on('capture:menu', openMenu);
   void ipcMain;
 };
