@@ -1,0 +1,8 @@
+﻿Default adhan sound (app/assets/adzan/adzan.ogg)
+
+Title:   Beautiful adhan.ogg
+Author:  Adam-synagda (Wikimedia Commons user)
+Source:  https://commons.wikimedia.org/wiki/File:Beautiful_adhan.ogg
+License: CC0 1.0 Universal - Public Domain Dedication
+         http://creativecommons.org/publicdomain/zero/1.0/
+Credit is given out of courtesy; CC0 does not require attribution.

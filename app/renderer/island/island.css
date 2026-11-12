@@ -24,11 +24,11 @@ svg { display: block; }
 }
 body.notch #island { margin-top: 0; border-top-left-radius: 0; border-top-right-radius: 0; box-shadow: 0 0 0 1px var(--line), 0 0 22px var(--edge); }
 body.notch #island::before, body.notch #island::after { content: none; }
-body.mode-shrink #island { --w: 92px !important; --h: 22px !important; border-radius: 11px; opacity: .92; }
-body.mode-shrink.clock-off #island { --w: 46px !important; --h: 6px !important; }
+body.mode-shrink:not(.toasting):not(.osd) #island { --w: 92px !important; --h: 22px !important; border-radius: 11px; opacity: .92; }
+body.mode-shrink.clock-off:not(.toasting):not(.osd) #island { --w: 46px !important; --h: 6px !important; }
 body.mode-shrink #compact .slot, body.mode-shrink #privacyDots { opacity: 0; }
-body.mode-shrink #shrinkClock { opacity: 1; }
-body.mode-peek #island { --w: 120px !important; --h: 6px !important; opacity: .55; }
+body.mode-shrink:not(.toasting):not(.osd) #shrinkClock { opacity: 1; }
+body.mode-peek:not(.toasting):not(.osd) #island { --w: 120px !important; --h: 6px !important; opacity: .55; }
 body.mode-peek #compact { opacity: 0; }
 body.expanded #island { --w: 620px; --h: var(--eh, 340px); border-radius: 26px; }
 body.notch.expanded #island { border-radius: 0 0 26px 26px; }
@@ -214,6 +214,9 @@ body.expanded #expanded { opacity: 1; pointer-events: auto; transition-delay: .1
 .mascot.m-plug { animation: hop .4s 3; transform-origin: 50% 100%; }
 @keyframes hop { 50% { transform: translateY(-3px) scale(1.05); } }
 .mascot.paused, .mascot.paused * { animation-play-state: paused !important; }
+.mascot.m-blinkfast .m-eye { animation: blinkfast .9s infinite; }
+@keyframes blinkfast { 0%, 60%, 100% { transform: scaleY(1); } 75% { transform: scaleY(.08); } }
+.mascot.m-far .m-eyes { transform: scale(.85) !important; transform-origin: 32px 30px; }
 
 /* eye exercise / idle stage */
 .stage-mascot { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 8px; }

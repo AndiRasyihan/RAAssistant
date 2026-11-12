@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif; }
+  #l { display: flex; justify-content: center; align-items: center; height: 100%; }
+  #l span { background: rgba(8,8,10,.72); color: #fff; padding: 8px 18px; border-radius: 20px; font-size: 20px; font-weight: 650; text-shadow: 0 1px 3px #000; max-width: 96%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity .25s; }
+  #l span:empty { opacity: 0; }
+</style>
+</head>
+<body><div id="l"><span id="t"></span></div>
+<script src="lyrics-overlay.js"></script>
+</body>
+</html>
