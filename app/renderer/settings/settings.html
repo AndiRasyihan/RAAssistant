@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob: file:; media-src 'self' file: data:; style-src 'self' 'unsafe-inline'; connect-src 'self' https://geocoding-api.open-meteo.com; script-src 'self'">
+<title>RA Assistant</title>
+<link rel="stylesheet" href="../island/island.css">
+<link rel="stylesheet" href="settings.css">
+</head>
+<body class="settings">
+  <div id="titlebar"><img src="../../assets/icon.png" alt=""><span id="ttl">RA Assistant</span></div>
+  <aside id="side">
+    <div class="search"><input id="q" type="search" spellcheck="false"></div>
+    <nav id="nav"></nav>
+  </aside>
+  <main id="main"></main>
+  <script src="../../shared/i18n.js"></script>
+  <script src="../../shared/cities.js"></script>
+  <script src="../island/core.js"></script>
+  <script src="../island/mascot.js"></script>
+  <script src="settings.js"></script>
+</body>
+</html>
