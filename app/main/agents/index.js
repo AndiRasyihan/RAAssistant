@@ -315,7 +315,8 @@ class Agents {
     if (s.source === 'copilot') {
       if (a.type === 'open') return this.ctx.focusApp('github.exe', '');
       // Copilot app has no public API: drive its UI via UI Automation (experimental).
-      const r = await this.ctx.uia({ exe: 'github.exe', action: a.type, value: a.value || '' });
+      const r = await this.ctx.uia({ exe: 'github.exe', action: a.type, value: a.value || '', question: s.choices ? s.question : '' });
+      if (process.env.RA_DEBUG) try { fs.appendFileSync(path.join(os.tmpdir(), 'ra_debug.log'), 'uia ' + JSON.stringify(r) + '\n'); } catch {}
       if (!r || !r.ok) return { error: (r && r.error) || L('Tombol tidak ditemukan. Buka sesi tersebut di aplikasi Copilot lalu coba lagi.', 'Button not found. Open that session in the Copilot app and try again.') };
       return { ok: true };
     }
