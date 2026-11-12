@@ -283,7 +283,17 @@ function shortcutSpec() {
 function ensureShortcuts() {
   const p = shortcutPaths();
   try { shell.writeShortcutLink(p.start, fs.existsSync(p.start) ? 'replace' : 'create', shortcutSpec()); } catch (e) { errlog('shortcut', e); }
+  cleanStrayShortcut();
   setAutostart(settings.get('autostart'));
+}
+// Electron may add a bare "Electron.lnk" for our AUMID; it shadows "RA Assistant" in Start search.
+function cleanStrayShortcut() {
+  try {
+    const stray = path.join(path.dirname(shortcutPaths().start), 'Electron.lnk');
+    if (!fs.existsSync(stray)) return;
+    const l = shell.readShortcutLink(stray);
+    if (path.resolve(l.target).toLowerCase() === path.resolve(process.execPath).toLowerCase() && !l.args) fs.unlinkSync(stray);
+  } catch (e) { errlog('shortcut-cleanup', e); }
 }
 function setAutostart(on) {
   const p = shortcutPaths();
@@ -472,6 +482,8 @@ app.on('window-all-closed', (e) => { /* keep running in tray */ });
 
 app.whenReady().then(() => {
   if (process.argv.includes('--install-shortcuts')) { ensureShortcuts(); }
+  // Self-heal: keep the Start Menu entry present and named "RA Assistant".
+  else if (!settings.get('firstRun')) { if (!fs.existsSync(shortcutPaths().start)) ensureShortcuts(); else cleanStrayShortcut(); }
   createIsland();
   createTray();
   startSystemHelper();
