@@ -8,10 +8,11 @@ satu proses helper PowerShell (WinRT/COM) — tanpa modul native atau .exe/.dll 
 
 ## Menjalankan
 
-Prasyarat: Node.js (sudah ada di laptop ini).
+Prasyarat: Windows 10/11, [Node.js](https://nodejs.org) LTS, dan Git.
 
 ```powershell
-cd "C:\Users\Rasyihan's\Projects\RAAssistant"
+git clone https://github.com/AndiRasyihan/RAAssistant.git
+cd RAAssistant
 npm install          # sekali saja; mengunduh electron & qrcode
 npm start            # menjalankan RA Assistant
 ```
