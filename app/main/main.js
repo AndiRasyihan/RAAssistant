@@ -46,6 +46,8 @@ const paths = {
   cache: path.join(process.env.LOCALAPPDATA || app.getPath('temp'), 'RAAssistant', 'Cache')
 };
 const settings = new JsonStore(path.join(paths.userData, 'settings.json'), DEFAULTS);
+// Tabs added in later versions are appended to a saved tab list.
+for (const t of DEFAULTS.behaviour.tabs) if (!settings.data.behaviour.tabs.some((x) => x.id === t.id)) settings.data.behaviour.tabs.push({ ...t });
 const data = new JsonStore(path.join(paths.userData, 'data.json'), {
   todos: [], events: [], reminders: [], drink: {}, lyricOffsets: {}, lyricSkip: {}, shelf: [], stats: {}
 });
@@ -201,19 +203,37 @@ function computeMode() {
   if (exe && b.hideApps.map((x) => x.toLowerCase()).includes(exe)) return 'hidden';
   if (fg.full && b.autoHideFullscreen) return 'fullscreen';
   if (b.visibility === 'activity' && !view.activity && !view.hovering && !view.trayShown) return 'peek';
-  if (b.onTop === 'shrink' && fg.top && !view.hovering) {
+  if (isBrowserFg() && !view.hovering && !revealed()) return 'browser';
+  if (b.onTop === 'shrink' && fg.top && !view.hovering && !revealed()) {
     const noShrink = OFFICE.concat(b.noShrinkApps.map((x) => x.toLowerCase()));
     if (!noShrink.includes(exe)) return 'shrink';
   }
   return 'normal';
 }
 
+// Keyboard-triggered panels (e.g. the capture shortcut) unfold a tucked island for a moment.
+let revealUntil = 0, revealTimer = null;
+function revealed() { return Date.now() < revealUntil; }
+ctx.reveal = (ms = 4500) => {
+  revealUntil = Date.now() + ms;
+  clearTimeout(revealTimer);
+  revealTimer = setTimeout(() => applyVisibility(), ms + 50);
+  applyVisibility();
+};
+
+function isBrowserFg() {
+  const b = settings.get('behaviour');
+  const exe = (view.fg.exe || '').toLowerCase();
+  return !!(b.browserNotch && exe && (b.browserApps || []).map((x) => x.toLowerCase()).includes(exe));
+}
+
 function applyVisibility(force) {
   if (!island) return;
   const mode = computeMode();
-  if (mode === view.mode && !force) return;
-  view.mode = mode;
-  ctx.state('layout', { mode });
+  const notch = isBrowserFg();
+  if (mode === view.mode && notch === view.notch && !force) return;
+  view.mode = mode; view.notch = notch;
+  ctx.state('layout', { mode, notch });
   const hide = mode === 'hidden' || mode === 'fullscreen';
   softHide(hide);
   updateLyricsOverlay();
@@ -230,6 +250,7 @@ function softHide(on) {
   else { island.setAlwaysOnTop(true, 'screen-saver'); island.setIgnoreMouseEvents(true, { forward: true }); }
 }
 ctx.islandHidden = () => softHidden;
+ctx.overlays = () => [island, lyricsWin, pillWin];
 
 // Lyrics stay on top over borderless-fullscreen games (click-through window).
 function updateLyricsOverlay() {
@@ -350,6 +371,8 @@ ipcMain.on('ra:focus', (e, on) => {
 let hitRects = [];
 let pointerInside = false;
 let lastCursor = null;
+let dwellSince = 0;
+const TUCKED = ['shrink', 'peek', 'browser'];
 ctx.handle('log', (...a) => { dlog('[renderer]', ...a.slice(0, -1)); });
 ctx.handle('rects', (rects) => { hitRects = Array.isArray(rects) ? rects : []; return true; });
 // setFocusable() rewrites the window's extended style, so re-assert click-through state afterwards.
@@ -362,7 +385,14 @@ function pollCursor() {
   const p = screen.getCursorScreenPoint();
   const b = island.getBounds();
   const x = p.x - b.x, y = p.y - b.y;
-  const inside = hitRects.some(([l, t, w, h]) => x >= l - 2 && x <= l + w + 2 && y >= t - 2 && y <= t + h + 2);
+  const raw = hitRects.some(([l, t, w, h]) => x >= l - 2 && x <= l + w + 2 && y >= t - 2 && y <= t + h + 2);
+  // A tucked-away island only opens once the cursor rests on it, so passing by doesn't pop it open.
+  let inside = raw;
+  if (!raw) dwellSince = 0;
+  else if (!pointerInside && TUCKED.includes(view.mode)) {
+    if (!dwellSince) dwellSince = Date.now();
+    if (Date.now() - dwellSince < (settings.get('behaviour.hoverDelay') || 0)) inside = false;
+  }
   if (inside !== pointerInside) {
     pointerInside = inside;
     if (inside) island.setIgnoreMouseEvents(false); else island.setIgnoreMouseEvents(true, { forward: true });

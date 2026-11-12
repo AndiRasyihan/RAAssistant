@@ -30,6 +30,8 @@ body.mode-shrink #compact .slot, body.mode-shrink #privacyDots { opacity: 0; }
 body.mode-shrink:not(.toasting):not(.osd) #shrinkClock { opacity: 1; }
 body.mode-peek:not(.toasting):not(.osd) #island { --w: 120px !important; --h: 6px !important; opacity: .55; }
 body.mode-peek #compact { opacity: 0; }
+body.mode-browser:not(.toasting):not(.osd) #island { --w: 120px !important; --h: 7px !important; margin-top: 0; border-radius: 0 0 7px 7px; opacity: .9; }
+body.mode-browser #compact, body.mode-browser #privacyDots { opacity: 0; }
 body.expanded #island { --w: 620px; --h: var(--eh, 340px); border-radius: 26px; }
 body.notch.expanded #island { border-radius: 0 0 26px 26px; }
 

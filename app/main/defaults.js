@@ -23,7 +23,12 @@ module.exports = {
     ],
     hideApps: [],
     autoHideFullscreen: true,
-    noShrinkApps: []
+    noShrinkApps: [],
+    // In browsers the island tucks into a tiny notch and only opens when the cursor rests on it.
+    browserNotch: true,
+    browserApps: ['chrome.exe', 'msedge.exe', 'firefox.exe', 'brave.exe', 'opera.exe', 'vivaldi.exe', 'arc.exe', 'zen.exe', 'floorp.exe', 'librewolf.exe', 'waterfox.exe', 'thorium.exe', 'comet.exe'],
+    hoverZone: 'tight',       // tight (only the visible notch/pill) | wide
+    hoverDelay: 250           // ms the cursor must rest on a shrunk island before it opens
   },
   mascot: {
     eye: '#5eead4',

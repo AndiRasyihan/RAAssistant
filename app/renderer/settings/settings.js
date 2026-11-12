@@ -230,6 +230,17 @@
         item(L('Jangan mengecil di aplikasi ini', "Don't shrink in these apps"), L('Aplikasi Office otomatis termasuk.', 'Office apps are included automatically.'), null),
         item('', '', strList('behaviour.noShrinkApps', 'contoh: chrome.exe', exeNorm), { col: true })
       ),
+      group(L('Di browser', 'In browsers'),
+        item(L('Notch tersembunyi di browser', 'Tuck into a notch in browsers'), L('Saat Chrome/Edge/Firefox dll. aktif, island mengecil jadi notch tipis di tepi atas (tanpa pil jam) agar tidak menutupi tab & bilah alamat. Arahkan kursor tepat ke notch untuk membukanya.', 'When Chrome/Edge/Firefox etc. is active, the island becomes a thin notch at the top edge (no clock pill) so it never covers tabs or the address bar. Rest the cursor right on the notch to open it.'), toggle('behaviour.browserNotch'), { keywords: 'chrome edge firefox web browser notch' }),
+        item(L('Daftar browser', 'Browser list'), '', null),
+        item('', '', strList('behaviour.browserApps', 'contoh: chrome.exe', exeNorm), { col: true, keywords: 'browser chrome' })
+      ),
+      group(L('Membuka island yang mengecil', 'Opening a shrunk island'),
+        item(L('Area pemicu', 'Trigger area'), L('“Pas di notch”: island hanya terbuka bila kursor tepat di atas notch/pil kecil (dan tepi layar di atasnya). “Lebar”: cukup mendekat.', '“Notch only”: opens only when the cursor is right on the small notch/pill (and the screen edge above it). “Wide”: getting close is enough.'),
+          seg('behaviour.hoverZone', [['tight', L('Pas di notch', 'Notch only')], ['wide', L('Lebar', 'Wide')]]), { keywords: 'hover kursor cursor' }),
+        item(L('Jeda sebelum terbuka', 'Delay before opening'), L('Kursor harus diam di notch selama ini, supaya tidak terbuka saat sekadar lewat.', 'The cursor must rest on the notch this long so it does not open when just passing by.'),
+          seg('behaviour.hoverDelay', [[0, L('Langsung', 'Instant')], [250, '0,25 s'], [500, '0,5 s'], [800, '0,8 s']]))
+      ),
       group(L('Sembunyikan saat aplikasi ini aktif', 'Hide when these apps are active'),
         item('', '', strList('behaviour.hideApps', 'contoh: obs64.exe', exeNorm), { col: true, keywords: 'hide exe' })
       ),
@@ -485,7 +496,7 @@
         item(L('Pintasan global', 'Global shortcut'), L('Membuka menu tangkap layar, atau menghentikan rekaman yang berjalan.', 'Opens the capture menu, or stops a running recording.'), shortcutRecorder())
       ),
       group(L('Privasi', 'Privacy'),
-        item(L('Sembunyikan island dari tangkapan & rekaman', 'Hide the island from screenshots & recordings'), L('Juga dari Snipping Tool, OBS, dan aplikasi lain.', 'Also from Snipping Tool, OBS and other tools.'), toggle('capture.hideFromCapture')),
+        item(L('Ikutkan island/notch di tangkapan & rekaman', 'Include the island/notch in screenshots & recordings'), L('Mati (bawaan): island tidak terlihat di tangkapan RA, Snipping Tool, OBS, dll. Nyala: island ikut tertangkap.', 'Off (default): the island is invisible to RA, Snipping Tool, OBS etc. On: the island is captured too.'), (() => { const t = toggle('capture.hideFromCapture'); const i = t.querySelector('input'); i.checked = !get('capture.hideFromCapture'); i.onchange = () => set('capture.hideFromCapture', !i.checked); return t; })(), { keywords: 'screenshot ss sembunyikan hide capture' }),
         item(L('Rekam mikrofon', 'Record microphone'), L('Audio sistem selalu ikut direkam.', 'System audio is always recorded.'), toggle('capture.recordMic'))
       ),
       group(L('Lokasi file', 'File locations'),

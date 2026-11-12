@@ -6,7 +6,7 @@
   function applyLook() {
     const S = RA.S;
     window.RAI18N.setLang(S.lang);
-    body.classList.toggle('notch', S.appearance.style === 'notch');
+    body.classList.toggle('notch', S.appearance.style === 'notch' || !!RA.layoutNotch);
     for (const c of [...body.classList]) if (c.startsWith('theme-')) body.classList.remove(c);
     body.classList.add('theme-' + S.appearance.theme);
     document.documentElement.style.setProperty('--accent', S.appearance.accent);
@@ -27,6 +27,7 @@
     RA.S = init.settings;
     RA.st = Object.assign(init.state || {}, RA.st);
     RA.ver = init.version;
+    RA.layoutNotch = !!(RA.st.layout && RA.st.layout.notch);
     applyLook();
     RA.buildTabs();
     setMode((RA.st.layout && RA.st.layout.mode) || 'normal');
@@ -51,7 +52,7 @@
   });
   window.ra.on('ra:blur', () => { if (!RA.pointerInside && !RA.pins) RA.expand(false); });
 
-  RA.on('layout', (v) => setMode(v.mode));
+  RA.on('layout', (v) => { RA.layoutNotch = !!v.notch; applyLook(); setMode(v.mode); });
   RA.on('zoom', (k) => { RA.zoom = k; RA.size(); });
   RA.on('pointer', (v) => RA.setPointer(v.inside));
   RA.on('volume', (v) => { if (v.osd) RA.osd('volume', v.muted ? 0 : v.v); });

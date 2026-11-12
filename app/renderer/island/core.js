@@ -160,8 +160,17 @@
   let lastRectKey = '';
   function reportRects(w, h) {
     const notch = document.body.classList.contains('notch');
-    const top = notch ? 0 : 8;
-    if ((RA.mode === 'shrink' || RA.mode === 'peek') && !toastShowing && !document.body.classList.contains('osd')) { w = 140; h = 30; }
+    let top = notch ? 0 : 8;
+    const mode = RA.mode;
+    if ((mode === 'shrink' || mode === 'peek' || mode === 'browser') && !toastShowing && !document.body.classList.contains('osd')) {
+      if (RA.S && RA.S.behaviour.hoverZone === 'wide') { w = 140; h = 30; top = 0; }
+      else {
+        // Only the visible notch/pill (plus the screen edge above it) opens the island.
+        const off = RA.S && RA.S.behaviour.clockPill === 'off';
+        const vis = mode === 'browser' ? [120, 7, 0] : mode === 'peek' ? [120, 6, top] : off ? [46, 6, top] : [92, 22, top];
+        w = vis[0] + 8; h = vis[1] + vis[2] + 3; top = 0;
+      }
+    }
     const W = document.documentElement.clientWidth;
     const z = RA.zoom || 1;
     const rects = [[(W - w) / 2 * z, 0, w * z, (top + h) * z]];
@@ -179,7 +188,7 @@
     RA.pointerInside = inside;
     clearTimeout(hoverT); clearTimeout(leaveT);
     if (inside) {
-      if (RA.mode === 'shrink' || RA.mode === 'peek') return; // main switches mode first
+      if (RA.mode === 'shrink' || RA.mode === 'peek' || RA.mode === 'browser') return; // main switches mode first
       if (toastShowing && toastShowing.interactive) return; // let the user click the answer in place
       hoverT = setTimeout(() => RA.expand(true), 160);
     } else {
