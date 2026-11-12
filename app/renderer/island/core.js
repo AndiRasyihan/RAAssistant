@@ -161,7 +161,7 @@
   function reportRects(w, h) {
     const notch = document.body.classList.contains('notch');
     const top = notch ? 0 : 8;
-    if (RA.mode === 'shrink' || RA.mode === 'peek') { w = 140; h = 30; }
+    if ((RA.mode === 'shrink' || RA.mode === 'peek') && !toastShowing && !document.body.classList.contains('osd')) { w = 140; h = 30; }
     const W = document.documentElement.clientWidth;
     const z = RA.zoom || 1;
     const rects = [[(W - w) / 2 * z, 0, w * z, (top + h) * z]];

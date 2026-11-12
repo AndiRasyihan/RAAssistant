@@ -10,13 +10,28 @@ const { PSHelper } = require('./pshost');
 app.setName('RAAssistant');
 app.setAppUserModelId('RA.Assistant');
 // Keep the footprint small: no GPU-heavy features we don't need.
-app.commandLine.appendSwitch('disable-features', 'HardwareMediaKeyHandling,MediaSessionService,SpareRendererForSitePerProcess,CalculateNativeWinOcclusion');
+app.commandLine.appendSwitch('disable-features', 'HardwareMediaKeyHandling,MediaSessionService,SpareRendererForSitePerProcess,CalculateNativeWinOcclusion,Vulkan,WebGPU');
+// SwiftShader (vk_swiftshader.dll) is unsigned and gets blocked by Smart App Control; never fall back to it.
+app.commandLine.appendSwitch('disable-software-rasterizer');
+app.commandLine.appendSwitch('use-angle', 'd3d11');
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
 if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
 
 const DEBUG_LOG = process.env.RA_DEBUG ? require('path').join(require('os').tmpdir(), 'ra_debug.log') : null;
 function dlog(...a) { if (DEBUG_LOG) try { require('fs').appendFileSync(DEBUG_LOG, new Date().toISOString().slice(11, 23) + ' ' + a.map((x) => typeof x === 'string' ? x : JSON.stringify(x)).join(' ') + '\n'); } catch {} }
+// Errors always go to %APPDATA%\RAAssistant\error.log (small, rotated) so problems can be diagnosed.
+function errlog(where, e) {
+  try {
+    const f = require('path').join(app.getPath('userData'), 'error.log');
+    const fs0 = require('fs');
+    if (fs0.existsSync(f) && fs0.statSync(f).size > 512 * 1024) fs0.renameSync(f, f + '.old');
+    fs0.appendFileSync(f, `${new Date().toISOString()} [${where}] ${e && e.stack || e}\n`);
+  } catch {}
+  dlog('ERR', where, String(e && e.stack || e));
+}
+process.on('uncaughtException', (e) => errlog('uncaught', e));
+process.on('unhandledRejection', (e) => errlog('unhandled', e));
 
 const ROOT = path.join(__dirname, '..');
 const APP_DIR = path.join(ROOT, '..');
@@ -128,8 +143,9 @@ function openSettings(section) {
     titleBarStyle: 'hidden', titleBarOverlay: { color: '#111216', symbolColor: '#d6d6e0', height: 36 },
     webPreferences: webPrefs()
   });
-  settingsWin.loadFile(path.join(ROOT, 'renderer', 'settings', 'settings.html'), { query: section ? { section } : {} });
-  settingsWin.once('ready-to-show', () => settingsWin.show());
+  settingsWin.loadFile(path.join(ROOT, 'renderer', 'settings', 'settings.html'), { query: section ? { section } : {} }).catch((e) => errlog('settings load', e));
+  settingsWin.once('ready-to-show', () => { dlog('settings ready'); settingsWin.show(); });
+  settingsWin.webContents.on('console-message', (e, level, msg, line, src) => { if (level >= 2) errlog('settings console', `${msg} @${src}:${line}`); });
   // Destroyed on close to free memory; recreated on demand.
   settingsWin.on('closed', () => { settingsWin = null; });
 }
@@ -248,7 +264,7 @@ function shortcutSpec() {
 }
 function ensureShortcuts() {
   const p = shortcutPaths();
-  try { shell.writeShortcutLink(p.start, fs.existsSync(p.start) ? 'replace' : 'create', shortcutSpec()); } catch (e) { console.error('shortcut', e.message); }
+  try { shell.writeShortcutLink(p.start, fs.existsSync(p.start) ? 'replace' : 'create', shortcutSpec()); } catch (e) { errlog('shortcut', e); }
   setAutostart(settings.get('autostart'));
 }
 function setAutostart(on) {
@@ -256,7 +272,7 @@ function setAutostart(on) {
   try {
     if (on) shell.writeShortcutLink(p.startup, fs.existsSync(p.startup) ? 'replace' : 'create', shortcutSpec());
     else if (fs.existsSync(p.startup)) fs.unlinkSync(p.startup);
-  } catch (e) { console.error('autostart', e.message); }
+  } catch (e) { errlog('autostart', e); }
 }
 
 let captureAccel = null;
@@ -343,6 +359,8 @@ ctx.handle('data.set', (p, v) => { data.set(p, v); return true; });
 ctx.handle('openSettings', (section) => openSettings(section));
 ctx.handle('activity', (on) => { view.activity = !!on; applyVisibility(); });
 ctx.handle('pill', (open) => openPill(open));
+ctx.handle('timer.state', (s) => { ctx.state('timer', s); return true; });
+ctx.handle('timer.cmd', (a) => { ctx.state('cmd', { cmd: 'timer', a, at: Date.now() }); return true; });
 ctx.handle('openPath', (p) => shell.openPath(p));
 ctx.handle('showItem', (p) => shell.showItemInFolder(p));
 ctx.handle('openExternal', (u) => { if (/^(https?|ms-settings|zoommtg|msteams):/i.test(u)) shell.openExternal(u); });
@@ -398,7 +416,7 @@ function startSystemHelper() {
 function loadFeatures() {
   const dir = path.join(__dirname, 'features');
   for (const f of fs.readdirSync(dir).filter((x) => x.endsWith('.js')).sort()) {
-    try { require(path.join(dir, f)).init(ctx); } catch (e) { console.error('feature', f, e); }
+    try { require(path.join(dir, f)).init(ctx); } catch (e) { errlog('feature ' + f, e); }
   }
 }
 
@@ -412,7 +430,7 @@ function quit() {
 }
 
 let agents = null;
-app.on('second-instance', () => openSettings());
+app.on('second-instance', () => { dlog('second-instance'); try { openSettings(); } catch (e) { errlog('openSettings', e); } });
 app.on('window-all-closed', (e) => { /* keep running in tray */ });
 
 app.whenReady().then(() => {

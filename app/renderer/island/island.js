@@ -25,18 +25,18 @@
   async function boot() {
     const init = await RA.invoke('init');
     RA.S = init.settings;
-    RA.st = init.state || {};
+    RA.st = Object.assign(init.state || {}, RA.st);
     RA.ver = init.version;
     applyLook();
     RA.buildTabs();
     setMode((RA.st.layout && RA.st.layout.mode) || 'normal');
-    for (const k of Object.keys(RA.st)) RA.emit(k, RA.st[k]);
+    for (const k of Object.keys(RA.st)) if (k !== 'toast') RA.emit(k, RA.st[k]);
     RA.refresh();
     setInterval(tick, 1000);
     battery();
   }
 
-  window.ra.on('ra:state', (key, val) => { RA.st[key] = val; RA.emit(key, val); });
+  window.ra.on('ra:state', (key, val) => { RA.st[key] = val; if (RA.S) RA.emit(key, val); });
   window.ra.on('ra:settings', (S, changed) => {
     const prevTabs = JSON.stringify(RA.S.behaviour.tabs);
     const prevLang = RA.S.lang;
@@ -57,7 +57,60 @@
   RA.on('volume', (v) => { if (v.osd) RA.osd('volume', v.muted ? 0 : v.v); });
   RA.on('brightness', (v) => RA.osd('sun', v.v / 100));
   RA.on('caps', (v) => RA.osd('caps', null, v.on ? RA.t('osd.capsOn') : RA.t('osd.capsOff')));
-  RA.on('toast', (item) => { if (item && item.title) RA.toast(item); });
+  RA.on('toast', (item) => {
+    if (!item || !item.title) return;
+    const it = { ...item };
+    if (it.kind === 'notif') {
+      it.onClick = () => RA.invoke('notif.open', it.aumid, it.launch);
+      if (it.otp) { it.actions = [{ label: `${RA.t('otp.copy')} ${it.otp}`, pri: true, run: () => RA.invoke('copyOtp', it.otp) }]; it.ms = 15000; }
+    }
+    if (it.kind === 'download') it.onClick = () => RA.invoke('showItem', it.file);
+    if (it.kind === 'resume') it.actions = [{ label: RA.t('common.resume'), pri: true, run: () => RA.invoke('media', 'play') }];
+    if (it.kind === 'agent') it.onClick = () => RA.expand(true, 'agents');
+    if (it.kind === 'drink') it.actions = [{ label: RA.t('drink.add'), pri: true, run: () => RA.invoke('drink.add', 1) }];
+    if (it.kind === 'event' && it.link) it.actions = [{ label: RA.t('common.join'), pri: true, run: () => RA.invoke('openExternal', it.link) }];
+    if (it.kind === 'prayer') it.onClick = () => RA.expand(true, 'prayer');
+    RA.toast(it);
+  });
+
+  // ---- meeting mode
+  const micBtn = RA.$('#micBtn');
+  micBtn.innerHTML = RA.icons.mic;
+  micBtn.onclick = () => RA.invoke('mics.toggle');
+  RA.on('mics', (m) => { micBtn.classList.toggle('muted', !!m.muted); micBtn.innerHTML = m.muted ? RA.icons.micOff : RA.icons.mic; micBtn.title = m.muted ? RA.t('meeting.unmuteAll') : RA.t('meeting.muteAll'); });
+  RA.on('meeting', (m) => {
+    const was = RA.meetingActive;
+    RA.meetingActive = !!m.on;
+    body.classList.toggle('meeting', !!m.on && RA.S.meetings.micButton);
+    if (was && !m.on) RA.releaseHeld(RA.t('meeting.summary'));
+    RA.refresh(); RA.size();
+  });
+  RA.activity('meeting', () => {
+    const m = RA.st.meeting;
+    if (!m || !m.on) return null;
+    const mins = Math.floor((Date.now() - m.since) / 60000);
+    return { pri: 70, w: 320, html: `<div class="act"><span class="dot rec"></span><span class="txt"><b>${RA.t('meeting.on')}</b> <span class="sub">${RA.esc((m.apps || []).join(', '))} · ${mins} ${RA.t('common.min')}${RA.held.length ? ' · ' + RA.held.length + ' ' + RA.t('meeting.held') : ''}</span></span></div>` };
+  });
+
+  // ---- downloads
+  RA.activity('downloads', () => {
+    const d = RA.st.downloads;
+    if (!d || !d.length) return null;
+    const x = d[0];
+    const mb = (n) => (n / 1048576).toFixed(1);
+    return { pri: 30, w: 340, html: `<div class="act"><span style="width:16px">${RA.icons.download}</span><span class="txt">${RA.esc(x.name)} <span class="sub">${mb(x.size)} MB · ${mb(x.speed)} MB/s${d.length > 1 ? ' · +' + (d.length - 1) : ''}</span></span></div>` };
+  });
+
+  // ---- idle mascot
+  RA.activity('idle', () => {
+    const i = RA.st.idle;
+    if (!i || !i.on) return null;
+    const h = new Date().getHours();
+    const msg = h >= 22 || h < 5 ? RA.L('Rara mengantuk… zZ', 'Rara is sleepy… zZ') : RA.L('Rara menunggumu kembali', 'Rara is waiting for you');
+    return { pri: 5, w: 280, counts: false, html: `<div class="act">${RA.mascotHtml()}<span class="txt sub">${msg}</span></div>` };
+  });
+  RA.on('idle', () => RA.refresh());
+  RA.on('downloads', () => RA.refresh());
   RA.on('privacy', (p) => {
     body.classList.toggle('cam-on', !!(p && p.cam));
     body.classList.toggle('mic-on', !!(p && p.mic));

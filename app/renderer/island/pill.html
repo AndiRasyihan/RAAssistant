@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif; user-select: none; }
+  #p { position: absolute; inset: 4px; border-radius: 23px; background: #0b0b0e; color: #f3f3f6; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 14px; box-shadow: 0 4px 16px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.08); cursor: grab; }
+  #t { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; flex: 1; }
+  #k { font-size: 14px; }
+  button { width: 28px; height: 28px; border-radius: 50%; border: 0; background: rgba(255,255,255,.08); color: #fff; cursor: pointer; font-size: 12px; }
+  button:hover { background: rgba(255,255,255,.18); }
+</style>
+</head>
+<body><div id="p"><span id="k">⏳</span><span id="t">00:00</span><button id="go">⏯</button><button id="x">✕</button></div>
+<script src="pill.js"></script>
+</body>
+</html>
