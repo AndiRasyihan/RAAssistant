@@ -182,7 +182,9 @@
     const line = playing ? RA.currentLyric() : '';
     const txt = line || `${media.title}${media.artist ? ' · ' + media.artist : ''}`;
     const html = `<div class="act"><div class="art-mini" style="${media.art ? `background-image:url('${media.art}')` : ''}"></div><span class="txt">${RA.esc(txt)}</span><div class="bars ${playing ? '' : 'paused'}"><i></i><i></i><i></i><i></i></div></div>`;
-    return { pri: playing ? 40 : 10, html, w: playing ? 360 : 300, counts: playing };
+    // Widen the island so the whole line fits; anything longer becomes running text.
+    const w = Math.min(600, Math.max(playing ? 360 : 300, Math.ceil((RA.textW(txt) + 215) / 40) * 40));
+    return { pri: playing ? 40 : 10, html, w, counts: playing };
   });
 
   // Keep the compact lyric line fresh while playing (re-render only when the line changes).

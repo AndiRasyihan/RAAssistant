@@ -50,6 +50,37 @@
   RA.el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
   RA.esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   RA.pad = (n) => String(n).padStart(2, '0');
+  // Text width in px for the compact bar's 12px font (used to size the island to fit a lyric line).
+  const measureCtx = document.createElement('canvas').getContext('2d');
+  RA.textW = (s, font = '12px "Segoe UI Variable Text", "Segoe UI", sans-serif') => { measureCtx.font = font; return measureCtx.measureText(String(s || '')).width; };
+
+  // Single-line labels that don't fit scroll back and forth instead of ending in "…".
+  const MQ_SEL = '.ell, .act .txt, #toast .ttitle, #toast.q .qopt span';
+  RA.marquee = (root) => {
+    for (const el of (root || document).querySelectorAll(MQ_SEL)) {
+      const w = el.clientWidth;
+      if (!w) continue;
+      let inner = el.firstElementChild && el.firstElementChild.classList.contains('mqi') && el.childNodes.length === 1 ? el.firstElementChild : null;
+      const over = (inner ? inner.scrollWidth : el.scrollWidth) - w;
+      if (over > 2) {
+        if (!inner) { inner = document.createElement('span'); inner.className = 'mqi'; while (el.firstChild) inner.appendChild(el.firstChild); el.appendChild(inner); }
+        el.classList.add('mq');
+        inner.style.setProperty('--mq', -over + 'px');
+        inner.style.setProperty('--mqd', (3 + over / 28).toFixed(1) + 's');
+      } else if (inner) {
+        el.classList.remove('mq');
+        while (inner.firstChild) el.insertBefore(inner.firstChild, inner);
+        inner.remove();
+      }
+    }
+  };
+  let mqTimer = null;
+  RA.marqueeSoon = (ms = 450) => { if (!mqTimer) mqTimer = setTimeout(() => { mqTimer = null; RA.marquee(RA.$('#island')); }, ms); };
+  // Re-check after content changes, ignoring the progress clock and lyric scrolling that tick constantly.
+  new MutationObserver((recs) => {
+    if (recs.every((r) => r.target.nodeType === 1 && r.target.closest && r.target.closest('.times, .lyrics, .prog'))) return;
+    RA.marqueeSoon();
+  }).observe(document.documentElement, { childList: true, subtree: true });
   RA.hm = (d) => { d = d instanceof Date ? d : new Date(d); return RA.pad(d.getHours()) + '.' + RA.pad(d.getMinutes()); };
   RA.mmss = (s) => { s = Math.max(0, Math.floor(s)); const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); return (h ? h + ':' + RA.pad(m) : m) + ':' + RA.pad(s % 60); };
   RA.ago = (ms) => {
@@ -134,7 +165,7 @@
 
   // ------------------------------------------------------------- sizing
   RA.paneHeight = 330;
-  let osdTimer = null, toastShowing = null;
+  let osdTimer = null, toastShowing = null, lastSize = '';
   function sizeIsland() {
     const isl = RA.$('#island');
     let w, h;
@@ -145,6 +176,7 @@
     isl.style.setProperty('--w', w + 'px');
     isl.style.setProperty('--h', h + 'px');
     isl.style.setProperty('--eh', RA.paneHeight + 'px');
+    if (w + 'x' + h !== lastSize) { lastSize = w + 'x' + h; RA.marqueeSoon(); }
     positionMicBtn(w);
     reportRects(w, h);
   }
@@ -206,6 +238,7 @@
     const cur = RA.tabs.find((t) => t.id === RA.tab);
     if (cur) (on ? cur.onShow : cur.onHide) && (on ? cur.onShow() : cur.onHide());
     sizeIsland();
+    RA.marqueeSoon();
     if (!on) setTimeout(() => RA.flushToasts(), 400);
     else if (toastShowing) { const t = toastShowing; queue.unshift(t); toastShowing = null; document.body.classList.remove('toasting'); }
   };
@@ -242,6 +275,7 @@
     RA.tab = id;
     for (const b of document.querySelectorAll('#tabbar button[data-tab]')) b.classList.toggle('on', b.dataset.tab === id);
     for (const t of RA.tabs) if (t.pane) t.pane.classList.toggle('on', t.id === id);
+    RA.marqueeSoon && RA.marqueeSoon();
     const cur = RA.tabs.find((t) => t.id === id);
     RA.paneHeight = (cur && cur.height) || 330;
     if (cur && cur.onShow && RA.expanded) cur.onShow();

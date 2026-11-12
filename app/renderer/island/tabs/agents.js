@@ -117,14 +117,14 @@
         <button class="btn sm" data-i="${openIdx}">${RA.L('Buka', 'Open')}</button><button class="icon-btn" data-close style="width:24px;height:24px">${RA.icons.x}</button></div>
       <div class="qtext">${RA.esc(q.question || '')}</div>${q.error ? `<div class="small" style="color:#ff8a80;margin-top:4px">${RA.esc(RA.L('Gagal: ', 'Failed: ') + q.error)}</div>` : ''}${body}${reply}`;
     const n = choices ? choices.length : 0;
-    const qlines = Math.min(3, Math.ceil((q.question || '').length / 60));
+    const qlines = Math.min(6, Math.ceil((q.question || '').length / 60));
     const h = 62 + qlines * 18 + (q.error ? 34 : 0) + (choices ? n * 34 + 6 : canApprove ? 42 : 0) + 40;
     async function answer(type, value) {
       const r = await RA.invoke('agents.act', q.key, { type, value });
       if (r && r.error) RA.questionToast({ ...q, error: r.error });
       else RA.mascot.flash && RA.mascot.flash('happy', 1500);
     }
-    RA.toast({ ...q, kind: 'agentq', interactive: true, html, actions, w: 460, h: Math.min(h, 360), ms: 10 * 60000 });
+    RA.toast({ ...q, kind: 'agentq', interactive: true, html, actions, w: 460, h: Math.min(h, 420), ms: 10 * 60000 });
     setTimeout(() => {
       const i = RA.$('#toast .qreply input');
       if (!i) return;

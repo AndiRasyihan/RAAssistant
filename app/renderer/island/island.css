@@ -102,7 +102,7 @@ body.toasting #toast { opacity: 1; pointer-events: auto; }
 #toast.q { display: block; padding: 12px 14px; }
 #toast.q .qhead { display: flex; gap: 9px; align-items: center; }
 #toast.q .qhead .src { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #fff; flex: 0 0 auto; }
-#toast.q .qtext { margin-top: 8px; font-size: 13px; font-weight: 550; line-height: 1.38; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+#toast.q .qtext { margin-top: 8px; font-size: 13px; font-weight: 550; line-height: 1.38; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
 #toast.q .qopts { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; max-height: 210px; overflow-y: auto; overflow-x: hidden; }
 #toast.q .qopt { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; padding: 6px 9px; border-radius: 10px; background: var(--card); font-size: 12.5px; transition: background .12s, transform .12s; animation: qin .22s var(--ease) both; }
 #toast.q .qopt:nth-child(2) { animation-delay: .04s; } #toast.q .qopt:nth-child(3) { animation-delay: .08s; } #toast.q .qopt:nth-child(4) { animation-delay: .12s; } #toast.q .qopt:nth-child(5) { animation-delay: .16s; }
@@ -136,6 +136,10 @@ body.expanded #expanded { opacity: 1; pointer-events: auto; transition-delay: .1
 .card { background: var(--card); border-radius: 14px; padding: 10px 12px; }
 .h { font-weight: 600; font-size: 13px; margin: 2px 0 8px; display: flex; align-items: center; gap: 8px; }
 .ell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Running text for single-line labels that don't fit (see RA.marquee). */
+.mq { text-overflow: clip !important; }
+.mqi { display: inline-block; animation: mq var(--mqd, 6s) linear infinite alternate; will-change: transform; }
+@keyframes mq { 0%, 18% { transform: translateX(0); } 82%, 100% { transform: translateX(var(--mq, 0)); } }
 .empty { color: var(--muted); text-align: center; padding: 30px 10px; }
 
 /* ------------------------------------------------------------- music */
@@ -152,7 +156,7 @@ body.expanded #expanded { opacity: 1; pointer-events: auto; transition-delay: .1
 .ctrls { display: flex; justify-content: center; gap: 6px; }
 .lyrics { flex: 1; overflow: hidden; position: relative; mask-image: linear-gradient(transparent, #000 22%, #000 78%, transparent); }
 .lyrics .inner { position: absolute; left: 0; right: 0; top: 0; transition: transform .45s var(--ease); }
-.lyrics p { margin: 0; padding: 4px 6px; font-size: 15px; font-weight: 600; color: var(--muted); opacity: .55; border-radius: 8px; cursor: pointer; transition: color .3s, opacity .3s, transform .3s; transform-origin: left center; }
+.lyrics p { margin: 0; padding: 4px 6% 4px 6px; font-size: 15px; font-weight: 600; color: var(--muted); opacity: .55; border-radius: 8px; cursor: pointer; transition: color .3s, opacity .3s, transform .3s; transform-origin: left center; overflow-wrap: anywhere; }
 .lyrics p:hover { background: var(--card); }
 .lyrics p.cur { color: var(--fg); opacity: 1; transform: scale(1.04); }
 .lyrics .note { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); }

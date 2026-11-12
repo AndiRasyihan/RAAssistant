@@ -258,7 +258,7 @@ function updateLyricsOverlay() {
   if (want && !lyricsWin) {
     const d = targetDisplay();
     lyricsWin = new BrowserWindow({
-      width: 700, height: 64, x: Math.round(d.bounds.x + (d.bounds.width - 700) / 2), y: d.bounds.y + 6,
+      width: 900, height: 100, x: Math.round(d.bounds.x + (d.bounds.width - 900) / 2), y: d.bounds.y + 6,
       frame: false, transparent: true, resizable: false, skipTaskbar: true, focusable: false, alwaysOnTop: true,
       hasShadow: false, show: false, backgroundColor: '#00000000', webPreferences: webPrefs()
     });
