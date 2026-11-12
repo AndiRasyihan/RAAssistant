@@ -70,6 +70,9 @@
     if (it.kind === 'drink') it.actions = [{ label: RA.t('drink.add'), pri: true, run: () => RA.invoke('drink.add', 1) }];
     if (it.kind === 'event' && it.link) it.actions = [{ label: RA.t('common.join'), pri: true, run: () => RA.invoke('openExternal', it.link) }];
     if (it.kind === 'prayer') it.onClick = () => RA.expand(true, 'prayer');
+    if (it.kind === 'phonetext') it.actions = [{ label: RA.t('common.copy'), pri: true, run: () => RA.invoke('copyText', it.text) }];
+    if (it.kind === 'shelf') it.onClick = () => RA.expand(true, 'shelf');
+    if (it.kind === 'capture' && it.file) { it.onClick = () => RA.invoke('showItem', it.file); }
     RA.toast(it);
   });
 

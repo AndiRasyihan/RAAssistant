@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b0e">
+<title>RA Assistant · Ponsel</title>
+<style>
+  :root { --bg: #0b0b0e; --card: #17181d; --fg: #f3f3f6; --muted: #9a9aa6; --accent: #8b7cff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding: 16px 16px 40px; }
+  h1 { font-size: 20px; margin: 4px 0 2px; display: flex; align-items: center; gap: 10px; }
+  h1 i { width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(135deg, #8b7cff, #3fc8c0); display: inline-block; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+  section { background: var(--card); border-radius: 16px; padding: 14px; margin-bottom: 14px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin: 0 0 10px; }
+  .btn { display: block; width: 100%; padding: 13px; border-radius: 12px; border: 0; background: var(--accent); color: #fff; font-size: 15px; font-weight: 600; text-align: center; }
+  .btn.ghost { background: rgba(255,255,255,.08); }
+  textarea { width: 100%; min-height: 80px; border-radius: 12px; border: 1px solid rgba(255,255,255,.1); background: #0f1014; color: var(--fg); padding: 10px; font: inherit; margin-bottom: 8px; }
+  .item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid rgba(255,255,255,.06); }
+  .item:first-child { border-top: 0; }
+  .item .n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item a { color: var(--accent); font-weight: 600; text-decoration: none; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,.08); overflow: hidden; margin-top: 8px; display: none; }
+  .bar b { display: block; height: 100%; width: 0; background: var(--accent); }
+  .txt { white-space: pre-wrap; word-break: break-word; flex: 1; font-size: 14px; }
+  #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #fff; color: #111; padding: 10px 16px; border-radius: 20px; font-weight: 600; opacity: 0; transition: opacity .2s; }
+</style>
+</head>
+<body>
+  <h1><i></i>RA Assistant</h1>
+  <div class="sub" id="sub">Tersambung ke laptop lewat Wi‑Fi lokal</div>
+
+  <section>
+    <h2 id="hSend">Kirim ke laptop</h2>
+    <input type="file" id="file" multiple hidden>
+    <button class="btn" id="pick">📎 Pilih file</button>
+    <div class="bar" id="bar"><b></b></div>
+    <div style="height:10px"></div>
+    <textarea id="text" placeholder="Ketik atau tempel teks…"></textarea>
+    <button class="btn ghost" id="sendText">✉️ Kirim teks</button>
+  </section>
+
+  <section>
+    <h2 id="hShelf">File di rak laptop</h2>
+    <div id="shelf" class="muted">…</div>
+  </section>
+
+  <section>
+    <h2 id="hTexts">Teks dari laptop</h2>
+    <div id="texts" class="muted">…</div>
+  </section>
+
+  <div id="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>

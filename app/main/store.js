@@ -34,7 +34,12 @@ class JsonStore {
     this.defaults = defaults;
     this.timer = null;
     let loaded = {};
-    try { loaded = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { /* first run */ }
+    try {
+      loaded = JSON.parse(fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, ''));
+    } catch (e) {
+      // Keep a copy of an unreadable file instead of silently overwriting the user's data.
+      if (e.code !== 'ENOENT') try { fs.copyFileSync(file, file + '.corrupt'); } catch {}
+    }
     this.data = deepMerge(defaults, loaded);
     this.listeners = [];
   }

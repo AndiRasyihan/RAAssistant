@@ -108,6 +108,8 @@ namespace RAH {
     [StructLayout(LayoutKind.Sequential)] public struct MONITORINFO { public int cbSize; public RECT rcMonitor; public RECT rcWork; public uint dwFlags; }
 
     public static bool Caps() { return (GetKeyState(0x14) & 1) != 0; }
+    [DllImport("user32.dll")] static extern uint GetClipboardSequenceNumber();
+    public static uint ClipSeq() { return GetClipboardSequenceNumber(); }
 
     static uint lastPid; static string lastExe = "";
     // exe|fullscreen|coversTop|notificationState|monitorLeft,monitorTop
@@ -390,7 +392,7 @@ try { Register-CimIndicationEvent -Namespace root/wmi -ClassName WmiMonitorBrigh
 $stdin = New-Object System.IO.StreamReader([Console]::OpenStandardInput(), (New-Object System.Text.UTF8Encoding($false)))
 $read = $stdin.ReadLineAsync()
 $tick = 0
-$last = @{ caps = $null; vol = ''; fg = ''; cam = $null; mic = $null }
+$last = @{ caps = $null; vol = ''; fg = ''; cam = $null; mic = $null; clip = $null; fgExe = '' }
 Send @{ t = 'ready' }
 Poll-Media $true
 
@@ -407,9 +409,13 @@ while ($true) {
     $v = [RAH.Audio]::State()
     if ($v -ne $last.vol) { $p = $v.Split('|'); Send @{ t = 'vol'; v = [double]$p[0]; muted = ($p[1] -eq '1') }; $last.vol = $v }
   }
+  if ($tick % 3 -eq 1) {
+    $cs = [RAH.Win]::ClipSeq()
+    if ($cs -ne $last.clip) { if ($last.clip -ne $null) { Send @{ t = 'clip'; seq = $cs; fg = $last.fgExe } }; $last.clip = $cs }
+  }
   if ($tick % 3 -eq 0) {
     $f = [RAH.Win]::Foreground()
-    if ($f -ne $last.fg) { $p = $f.Split('|'); Send @{ t = 'fg'; exe = $p[0]; full = ($p[1] -eq '1'); top = ($p[2] -eq '1'); qns = [int]$p[3]; mon = $p[4] }; $last.fg = $f }
+    if ($f -ne $last.fg) { $p = $f.Split('|'); $last.fgExe = $p[0]; Send @{ t = 'fg'; exe = $p[0]; full = ($p[1] -eq '1'); top = ($p[2] -eq '1'); qns = [int]$p[3]; mon = $p[4] }; $last.fg = $f }
   }
   if ($tick % 5 -eq 0) { Poll-Media $false }
   if ($tick % 8 -eq 0) {
