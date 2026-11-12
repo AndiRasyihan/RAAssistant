@@ -251,6 +251,7 @@ function softHide(on) {
 }
 ctx.islandHidden = () => softHidden;
 ctx.overlays = () => [island, lyricsWin, pillWin];
+ctx.fg = () => view.fg;
 
 // Lyrics stay on top over borderless-fullscreen games (click-through window).
 function updateLyricsOverlay() {
@@ -453,6 +454,7 @@ function startSystemHelper() {
   sys.on('fg', (m) => {
     if (SELF_EXES.includes(m.exe)) return; // our own windows got focus; keep previous decision
     view.fg = m;
+    bus.emit('fg', m);
     applyVisibility();
   });
   sys.on('vol', (m) => { const first = !stateCache.volume; ctx.state('volume', { v: m.v, muted: m.muted, osd: !first, at: Date.now() }); });

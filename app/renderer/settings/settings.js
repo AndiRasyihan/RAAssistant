@@ -244,6 +244,10 @@
       group(L('Sembunyikan saat aplikasi ini aktif', 'Hide when these apps are active'),
         item('', '', strList('behaviour.hideApps', 'contoh: obs64.exe', exeNorm), { col: true, keywords: 'hide exe' })
       ),
+      group(L('Pantauan layar', 'Screen time'),
+        item(L('Catat waktu layar', 'Track screen time'), L('Mencatat lama layar aktif, diam, terkunci, tidur/standby, dan aplikasi yang tampil di depan. Hanya disimpan di laptop ini (14 hari). Lihat di tab Layar.', 'Records how long the screen was active, idle, locked or asleep, and which apps were in front. Stored only on this laptop (14 days). See the Screen tab.'), toggle('screen.track'), { keywords: 'screen time waktu layar aplikasi' }),
+        item(L('Hapus riwayat', 'Clear history'), '', button(L('Hapus', 'Clear'), () => RA.invoke('screentime.clear')))
+      ),
       group(L('Tab', 'Tabs'), item(L('Urutan & tampil', 'Order & visibility'), L('Geser naik/turun dan nyalakan tab yang ingin tampil.', 'Move up/down and toggle the tabs you want.'), null), item('', '', tabsEditor(), { col: true }))
     ];
   }

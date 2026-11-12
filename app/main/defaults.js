@@ -19,7 +19,8 @@ module.exports = {
     tabs: [
       { id: 'music', show: true }, { id: 'agents', show: true }, { id: 'today', show: true },
       { id: 'prayer', show: true }, { id: 'shelf', show: true }, { id: 'timer', show: true },
-      { id: 'reminders', show: true }, { id: 'drink', show: true }, { id: 'capture', show: true }
+      { id: 'reminders', show: true }, { id: 'drink', show: true }, { id: 'capture', show: true },
+      { id: 'listen', show: true }, { id: 'screen', show: true }
     ],
     hideApps: [],
     autoHideFullscreen: true,
@@ -80,6 +81,8 @@ module.exports = {
     eye: { enabled: true, intervalMin: 20 }
   },
   focus: { minutes: 25, breakMin: 5 },
+  screen: { track: true },          // screen-time tracking (local only)
+  listen: { lang: 'id', model: 'base' }, // live speech-to-text (offline Whisper)
   capture: {
     shortcut: 'CommandOrControl+Shift+S',
     hideFromCapture: true,
