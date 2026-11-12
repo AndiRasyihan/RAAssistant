@@ -436,7 +436,7 @@ function startSystemHelper() {
   ctx.uia = (req) => new Promise((resolve) => {
     const t = setTimeout(() => resolve({ ok: false, error: 'timeout' }), 20000);
     sys.once('uia', (m) => { clearTimeout(t); resolve((m.data && m.data[0]) || { ok: false }); });
-    sys.send({ c: 'uia', exe: req.exe, a: req.action, v: req.value });
+    sys.send({ c: 'uia', exe: req.exe, a: req.action, v: req.value, q: req.question || '' });
   });
 }
 
