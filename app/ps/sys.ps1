@@ -276,11 +276,20 @@ function Poll-Media([bool]$force) {
   if (-not $props) { return }
   $key = "$($s.SourceAppUserModelId)|$($props.Title)|$($props.Artist)"
   $now = [DateTime]::UtcNow
+  # Browsers first expose their own app icon as the thumbnail and swap in the video thumbnail later.
+  if ($key -eq $script:mKey -and $script:artChecks -and $script:artChecks.Count -and $now -ge $script:artChecks[0]) {
+    $script:artChecks = @($script:artChecks | Select-Object -Skip 1)
+    $art = Get-Art $props
+    if ($art -and $art -ne $script:mArt) { $script:mArt = $art; $force = $true }
+  }
   $expected = $script:mPos + $(if ($script:mStatus -eq 4) { ($now - $script:mAt).TotalSeconds } else { 0 })
   $changed = $force -or $key -ne $script:mKey -or $status -ne $script:mStatus -or [Math]::Abs($pos - $expected) -gt 2.5
   if (-not $changed) { return }
   $msg = @{ t = 'media'; app = $s.SourceAppUserModelId; title = $props.Title; artist = $props.Artist; album = $props.AlbumTitle; status = $status; pos = [Math]::Round($pos, 2); dur = [Math]::Round($dur, 2) }
-  if ($key -ne $script:mKey -or $force) { $msg.art = Get-Art $props; $msg.newTrack = $true }
+  if ($key -ne $script:mKey -or $force) {
+    $msg.art = Get-Art $props; $msg.newTrack = $true
+    $script:mArt = $msg.art; if ($key -ne $script:mKey) { $script:artChecks = @(1.5, 4, 9) | ForEach-Object { $now.AddSeconds($_) } }
+  }
   $script:mKey = $key; $script:mStatus = $status; $script:mPos = $pos; $script:mAt = $now
   Send $msg
 }
