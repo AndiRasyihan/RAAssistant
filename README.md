@@ -99,7 +99,16 @@ Perintah `RA Agent Bridge: Show status` di editor menampilkan status koneksi.
   (Open-Meteo).
 - **Timer**: timer, stopwatch (putaran), mode Fokus Pomodoro (menahan notifikasi), pil yang bisa dilepas & diseret.
 - **Tangkap**: area / layar penuh (disimpan ke `Gambar\Screenshots` + disalin), rekam layar MP4 (audio sistem + mik
-  opsional) ke `Video\Captures`. Island tidak ikut tertangkap (bisa diubah).
+  opsional) ke `Video\Captures`. Island tidak ikut tertangkap secara bawaan; centang **Ikutkan notch** (tab Tangkap)
+  atau *Pengaturan → Tangkap Layar* agar island ikut di tangkapan RA, Snipping Tool, OBS, dll.
+- **Dengar (suara → teks)**: transkripsi langsung dari mikrofon atau audio sistem (video/rapat di laptop), Bahasa
+  Indonesia / English, tombol **Salin** ke clipboard. Memakai Whisper secara **offline**; mesin (±30 MB) dan model
+  (±80 MB) diunduh sekali saat pertama dipakai. Mesin hanya hidup selama mendengarkan (±0,6–1 GB RAM), lalu dilepas;
+  berhenti sendiri setelah 2 menit tanpa suara. Jika mik dibisukan di Windows, tab menampilkan peringatan + tombol
+  **Aktifkan mik**.
+- **Layar (waktu layar)**: lama layar aktif, diam, terkunci, dan tidur/standby per hari, aplikasi yang tampil di
+  depan beserta durasinya, grafik 7 hari. Hanya disimpan lokal (14 hari); bisa dimatikan/dihapus di
+  *Pengaturan → Perilaku*. Ringan: memakai event jendela aktif yang sudah ada + satu timer 30 detik.
 - **Rak & Ponsel**: tahan file sementara; kirim file & teks laptop⇄ponsel lewat Wi‑Fi (pindai QR sekali). Hanya
   berjalan di jaringan **Pribadi**.
 - **Riwayat clipboard** (opsional): teks & gambar, tetap ada saat RA ditutup, **terhapus total saat laptop
@@ -107,7 +116,12 @@ Perintah `RA Agent Bridge: Show status` di editor menampilkan status koneksi.
   dari pengelola kata sandi tidak disimpan.
 - **Tampilan**: pil mengambang atau notch, 5 tema (Grafit, Embun, Laguna, Warna Sampul, Pendar Sampul), warna aksen,
   ukuran 75–130%, pilih monitor, mengecil otomatis di atas jendela maksimal, sembunyi di aplikasi layar penuh,
-  Bahasa Indonesia / English tanpa restart.
+  Bahasa Indonesia / English tanpa restart. Teks panjang tidak lagi terpotong "…": lirik dibungkus ke baris
+  berikutnya, island melebar mengikuti baris lirik, dan label satu baris yang tetap tidak muat berjalan (running text).
+- **Notch di browser**: saat Chrome/Edge/Firefox/Brave/Opera dll. aktif, island menyusut jadi notch tipis di tepi
+  atas (tanpa pil jam) supaya tidak menutupi tab & bilah alamat. Island hanya terbuka bila kursor **diam tepat di
+  notch** (jeda 0,25 detik, bisa diatur), tidak sekadar lewat di dekatnya. Daftar browser, area pemicu (Pas di notch /
+  Lebar) dan jedanya diatur di *Pengaturan → Perilaku*.
 - **Maskot Rara** (sepasang mata, agar jelas di notch kecil): 17 ekspresi — biasa, senang, mengedip, suka, kaget,
   berpikir (agen bekerja), bingung (agen bertanya), fokus (Pomodoro), bergoyang (musik), mengantuk, tidur (laptop
   diam/larut malam), pusing & kepanasan (CPU sibuk), sedih (internet putus), marah (baterai 10–20%), lemas (<10%),
@@ -138,11 +152,15 @@ Perintah `RA Agent Bridge: Show status` di editor menampilkan status koneksi.
 - Pengaturan: `%APPDATA%\RAAssistant\settings.json`; data (tugas, agenda, pengingat, rak): `data.json`.
 - Cache (lirik, clipboard): `%LOCALAPPDATA%\RAAssistant\Cache`.
 - Log galat: `%APPDATA%\RAAssistant\error.log`.
-- Koneksi keluar hanya ke LRCLIB (lirik), Open-Meteo (cuaca/geocoding), dan URL iCal Anda.
+- Koneksi keluar hanya ke LRCLIB (lirik), Open-Meteo (cuaca/geocoding), URL iCal Anda, dan — sekali saja saat fitur
+  Dengar pertama dipakai — jsDelivr (mesin transformers.js/ONNX) serta Hugging Face (model Whisper). Suara Anda tidak
+  pernah dikirim ke internet.
 
 ## Kredit
 
 - Suara adzan bawaan: "Beautiful adhan.ogg" oleh Adam-synagda, Wikimedia Commons, **CC0** (lihat
   `app/assets/adzan/CREDITS.txt`).
 - Lirik: [LRCLIB](https://lrclib.net). Cuaca: [Open-Meteo](https://open-meteo.com) (CC BY 4.0).
+- Transkripsi: [transformers.js](https://github.com/huggingface/transformers.js) (Apache-2.0),
+  [ONNX Runtime Web](https://github.com/microsoft/onnxruntime) (MIT), model [Whisper](https://github.com/openai/whisper) (MIT).
 - Nama, desain, tema, dan maskot RA Assistant adalah karya orisinal proyek ini.
