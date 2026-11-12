@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob: file:; media-src 'self' file: data: blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' https://lrclib.net https://api.open-meteo.com https://geocoding-api.open-meteo.com; script-src 'self'">
+<link rel="stylesheet" href="island.css">
+</head>
+<body>
+<div id="stage">
+  <div id="island" class="hit">
+    <div id="compact">
+      <div class="slot left" id="slotLeft"></div>
+      <div class="slot center" id="slotCenter"></div>
+      <div class="slot right" id="slotRight"></div>
+      <div id="privacyDots"><i class="cam"></i><i class="mic"></i></div>
+    </div>
+    <div id="osd"><span class="ico"></span><div class="bar"><b></b></div><span class="val"></span></div>
+    <div id="toast"></div>
+    <div id="expanded">
+      <div id="tabbar"></div>
+      <div id="panes"></div>
+    </div>
+  </div>
+  <button id="micBtn" class="hit" title=""></button>
+</div>
+<audio id="adzan" preload="none"></audio>
+<script src="../../shared/i18n.js"></script>
+<script src="core.js"></script>
+<script src="mascot.js"></script>
+<script src="tabs/music.js"></script>
+<script src="tabs/agents.js"></script>
+<script src="tabs/today.js"></script>
+<script src="tabs/prayer.js"></script>
+<script src="tabs/shelf.js"></script>
+<script src="tabs/timer.js"></script>
+<script src="tabs/reminders.js"></script>
+<script src="tabs/drink.js"></script>
+<script src="tabs/capture.js"></script>
+<script src="island.js"></script>
+</body>
+</html>

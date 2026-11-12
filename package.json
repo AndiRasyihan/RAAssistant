@@ -1,0 +1,20 @@
+{
+  "name": "ra-assistant",
+  "productName": "RA Assistant",
+  "version": "0.1.0",
+  "description": "RA Assistant - island desktop untuk Windows 11",
+  "main": "app/main/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "install-shortcuts": "electron . --install-shortcuts"
+  },
+  "license": "UNLICENSED",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^45.3.0"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  }
+}
