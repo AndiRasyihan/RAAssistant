@@ -108,10 +108,13 @@ class Agents {
       if (r.reset) { entry.log = new P.CopilotLog(); entry.offset = 0; return this.readCopilot(id, file); }
       if (r.text) { entry.log.feed(r.text); entry.offset = r.size; }
       const meta = entry.meta || (entry.meta = this.copilotMeta(id, file));
-      if (!meta.title) entry.meta = this.copilotMeta(id, file);
+      if (!meta.title || !meta.client) entry.meta = this.copilotMeta(id, file);
       const sum = entry.log.summary(r.mtime || fs.statSync(file).mtimeMs);
-      const client = (entry.meta.client || '').includes('autopilot') || (entry.meta.client || '').includes('github') ? 'Copilot app' : 'Copilot CLI';
-      this.update(entry.key, { source: 'copilot', sourceLabel: client, id, title: entry.meta.title || sum.prompt || 'Copilot', workspace: entry.meta.workspace, ...sum });
+      const c = (entry.meta.client || '').toLowerCase();
+      // VS Code ≥1.143 runs its agent on the Copilot harness, so its sessions live here too.
+      const isVSCode = c.includes('vscode');
+      const label = isVSCode ? 'VS Code' : c.includes('autopilot') || c.includes('github') ? 'Copilot app' : 'Copilot CLI';
+      this.update(entry.key, { source: isVSCode ? 'vscode' : 'copilot', sourceLabel: label, id, title: entry.meta.title || sum.prompt || 'Copilot', workspace: entry.meta.workspace, ...sum });
     } catch { /* file vanished */ }
   }
 

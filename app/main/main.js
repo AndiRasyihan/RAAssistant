@@ -54,6 +54,7 @@ bus.setMaxListeners(50);
 const stateCache = {};
 const handlers = {};
 let island = null, settingsWin = null, tray = null, lyricsWin = null, pillWin = null;
+let focusRequestedAt = 0;
 const view = { fg: { exe: '', full: false, top: false }, activity: false, forcedHidden: false, mode: 'normal', hovering: false };
 
 const ctx = {
@@ -126,7 +127,11 @@ function createIsland() {
   island.setContentProtection(!!settings.get('capture.hideFromCapture'));
   island.loadFile(path.join(ROOT, 'renderer', 'island', 'island.html'));
   island.once('ready-to-show', () => { placeIsland(); island.showInactive(); applyVisibility(true); });
-  island.on('blur', () => island.webContents.send('ra:blur'));
+  island.on('blur', () => {
+    if (Date.now() - focusRequestedAt < 1000) return; // spurious blur while we are taking focus
+    island.webContents.send('ra:blur');
+    if (island.isFocusable()) { island.setFocusable(false); applyIgnore(); }
+  });
   // Re-assert topmost occasionally; some fullscreen apps steal it.
   setInterval(() => { if (island && !softHidden) island.setAlwaysOnTop(true, 'screen-saver'); }, 15000);
 }
@@ -313,7 +318,16 @@ ipcMain.on('ra:focus', (e, on) => {
   if (!w) return;
   if (w === island) {
     // The island is normally non-focusable so clicking it never steals focus; text inputs opt in.
-    if (on) { island.setFocusable(true); island.focus(); } else if (island.isFocusable()) { island.setFocusable(false); }
+    if (on) {
+      focusRequestedAt = Date.now();
+      island.setFocusable(true);
+      // Windows' foreground lock blocks focus() from a background app (and isFocused() may still
+      // report true), so ask the helper to bring the island to the foreground.
+      if (ctx.sys) {
+        const hb = island.getNativeWindowHandle();
+        ctx.sys.send({ c: 'focusHwnd', h: hb.length >= 8 ? Number(hb.readBigUInt64LE(0)) : hb.readUInt32LE(0) });
+      }
+    } else if (island.isFocusable()) { island.setFocusable(false); }
     applyIgnore();
     return;
   }
@@ -408,6 +422,7 @@ function startSystemHelper() {
   sys.on('netcat', (m) => bus.emit('netcat', m));
   sys.on('bt', (m) => bus.emit('bt', m));
   sys.on('clip', (m) => bus.emit('clip', m));
+  sys.on('focusAck', (m) => dlog('focusAck', m));
   sys.on('stderr', (s) => { dlog('[sys]', s); });
   sys.start();
   ctx.handle('media', (a, v) => sys.send({ c: 'media', a, v }));

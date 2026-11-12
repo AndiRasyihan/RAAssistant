@@ -40,11 +40,14 @@
 
   function render() {
     if (!pane) return;
-    // Don't clobber an input the user is typing in.
+    // Don't clobber an input the user is typing in — unless an agent now needs an answer.
     const active = document.activeElement;
-    if (active && active.classList && active.classList.contains('reply') && pane.contains(active)) { RA.agentsDirty = true; return; }
+    const typing = active && active.classList && active.classList.contains('reply') && pane.contains(active);
+    if (typing && !list.some((s) => s.status === 'waiting' && !pane.querySelector(`.agent[data-key="${CSS.escape(s.key)}"] [data-act=allow], .agent[data-key="${CSS.escape(s.key)}"] [data-act=choice]`))) { RA.agentsDirty = true; return; }
+    const focusKey = typing ? active.dataset.key : null;
     const extNote = `<div class="small muted" style="margin:2px 0 8px">${RA.t('agents.ext')}: VS Code ${ext.vscode ? '✅' : '—'} · Antigravity IDE ${ext.antigravity ? '✅' : '—'}</div>`;
     pane.innerHTML = list.length ? extNote + list.map(card).join('') : `<div class="empty">${RA.t('agents.empty')}</div>${extNote}`;
+    if (focusKey) { const i = pane.querySelector(`input.reply[data-key="${CSS.escape(focusKey)}"]`); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
   }
 
   async function act(key, type, value, btn) {
@@ -68,7 +71,9 @@
           const inp = b.parentElement.querySelector('input');
           const v = inp.value.trim(); if (!v) return;
           inp.value = ''; delete drafts[key];
+          inp.blur(); window.ra.focus(false);
           act(key, 'reply', v, b);
+          setTimeout(render, 50);
         } else act(key, type, b.dataset.v, b);
       });
       p.addEventListener('mousedown', (e) => { if (e.target.tagName === 'INPUT') window.ra.focus(true); });

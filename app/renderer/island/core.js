@@ -196,6 +196,8 @@
     const cur = RA.tabs.find((t) => t.id === RA.tab);
     if (cur) (on ? cur.onShow : cur.onHide) && (on ? cur.onShow() : cur.onHide());
     sizeIsland();
+    if (!on) setTimeout(() => RA.flushToasts(), 400);
+    else if (toastShowing) { const t = toastShowing; queue.unshift(t); toastShowing = null; document.body.classList.remove('toasting'); }
   };
 
   RA.visibleTabs = () => {
@@ -264,8 +266,10 @@
   RA.toast = (item) => {
     if (RA.holding() && !item.urgent && !item.otp && !item.force) { RA.held.push(item); RA.refresh(); return; }
     queue.push(item);
-    if (!toastShowing) nextToast();
+    if (!toastShowing && !RA.expanded) nextToast();
   };
+  // Toasts wait while the panel is open (they would cover it) and play once it collapses.
+  RA.flushToasts = () => { if (!toastShowing && !RA.expanded && queue.length) nextToast(); };
   function nextToast() {
     const item = queue.shift();
     toastShowing = item || null;

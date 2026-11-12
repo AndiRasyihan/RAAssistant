@@ -201,6 +201,22 @@ namespace RAH {
       keybd_event(0x12, 0, 0, UIntPtr.Zero); keybd_event(0x12, 0, 2, UIntPtr.Zero); // ALT tap lifts the foreground lock
       return SetForegroundWindow(h);
     }
+    [DllImport("kernel32.dll")] static extern uint GetCurrentThreadId();
+    [DllImport("user32.dll")] static extern bool AttachThreadInput(uint a, uint b, bool attach);
+    [DllImport("user32.dll")] static extern bool BringWindowToTop(IntPtr h);
+    // Give keyboard focus to one of our own windows (the island input fields).
+    public static bool FocusHwnd(long hwnd) {
+      IntPtr h = new IntPtr(hwnd);
+      IntPtr fg = GetForegroundWindow();
+      if (fg == h) return true;
+      uint pid; uint ft = GetWindowThreadProcessId(fg, out pid); uint ct = GetCurrentThreadId();
+      bool att = ft != ct && AttachThreadInput(ct, ft, true);
+      keybd_event(0x12, 0, 0, UIntPtr.Zero); keybd_event(0x12, 0, 2, UIntPtr.Zero);
+      BringWindowToTop(h);
+      bool r = SetForegroundWindow(h);
+      if (att) AttachThreadInput(ct, ft, false);
+      return r;
+    }
   }
 }
 '@
@@ -382,6 +398,7 @@ function Handle($line) {
     'bt' { Get-Bluetooth }
     'uia' { Start-Bg 'uia' $uiaScript @{ exe = $m.exe; action = $m.a; value = $m.v; rid = $m.rid } ; $script:uiaRid = $m.rid }
     'focus' { Send @{ t = 'focus'; rid = $m.rid; ok = [RAH.Win]::Focus([string]$m.exe, [string]$m.title) } }
+    'focusHwnd' { $ok = [RAH.Win]::FocusHwnd([long]$m.h); Send @{ t = 'focusAck'; ok = $ok; h = $m.h } }
     'exit' { exit 0 }
   }
 }
