@@ -28,6 +28,8 @@ function clean(title) {
     .replace(/\s*\|.*$/, '')
     .replace(/\s+-\s+(remaster(ed)?|live|radio edit).*$/i, '')
     .replace(/\s+(ft|feat)\.?\s.*$/i, '')
+    // Unbracketed suffixes common on YouTube: "Lirik Video", "Official Music Video", "Lyrics", "Video Klip"…
+    .replace(/(\s+[-–—:]?\s*(official|lirik|lyrics?|lyric|video|klip|clip|music|musik|audio|mv|m\/v|hd|4k|visuali[sz]er|karaoke|cover|full)\b\.?)+\s*$/gi, '')
     .replace(/[“”"]/g, '')
     .trim();
 }
@@ -40,7 +42,11 @@ function queries(m) {
   const split = String(m.title || '').match(/^(.+?)\s+[-–—]\s+(.+)$/);
   if (split) { add(split[1], split[2]); add(split[2], split[1]); }
   add('', m.title);
-  return out.slice(0, 4);
+  const res = out.slice(0, 4);
+  // Last resort: LRCLIB free-text search over artist + title.
+  const best = split ? `${String(split[1]).trim()} ${clean(split[2])}` : `${res[0] ? res[0].a + ' ' + res[0].t : clean(m.title)}`;
+  res.push({ q: best.trim() });
+  return res;
 }
 
 exports.init = (ctx) => {
@@ -71,8 +77,10 @@ exports.init = (ctx) => {
       }
       if (!candidates.length) {
         for (const q of queries(m)) {
-          const url = `https://lrclib.net/api/search?track_name=${encodeURIComponent(q.t)}${q.a ? '&artist_name=' + encodeURIComponent(q.a) : ''}`;
-          const found = ((await getJson(url)) || []).filter((x) => x.syncedLyrics && !skip.includes(x.id));
+          const url = q.q ? `https://lrclib.net/api/search?q=${encodeURIComponent(q.q)}`
+            : `https://lrclib.net/api/search?track_name=${encodeURIComponent(q.t)}${q.a ? '&artist_name=' + encodeURIComponent(q.a) : ''}`;
+          let found = ((await getJson(url)) || []).filter((x) => x.syncedLyrics && !skip.includes(x.id));
+          if (m.dur) found = found.filter((x) => !x.duration || Math.abs(x.duration - m.dur) < 20);
           candidates.push(...found);
           if (found.length) break;
         }
