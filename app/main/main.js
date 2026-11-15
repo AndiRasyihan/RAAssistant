@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, screen, Tray, Menu, nativeImage, shell, Notification, globalShortcut, powerMonitor } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, Tray, Menu, nativeImage, shell, Notification, globalShortcut, powerMonitor, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { EventEmitter } = require('events');
@@ -172,7 +172,7 @@ function createIsland() {
     if (win !== island) return;
     if (Date.now() - focusRequestedAt < 1000) return; // spurious blur while we are taking focus
     island.webContents.send('ra:blur');
-    if (island.isFocusable()) { island.setFocusable(false); applyIgnore(); }
+    if (island.isFocusable()) { setIslandFocusable(false); applyIgnore(); }
   });
   // The island is not a normal window: Alt+F4, "End task" or WM_CLOSE must never remove it.
   // Only the tray's "Quit" ends RA Assistant.
@@ -243,7 +243,7 @@ function rebuildTrayMenu() {
     { label: t('tray.focus'), click: () => ctx.state('cmd', { cmd: 'focus', at: Date.now() }) },
     { label: t('tray.settings'), click: () => openSettings() },
     { type: 'separator' },
-    { label: t('tray.quit'), click: () => quit() }
+    { label: t('tray.quit'), click: () => quit('tray') }
   ]));
 }
 
@@ -441,14 +441,14 @@ ipcMain.on('ra:focus', (e, on) => {
     // The island is normally non-focusable so clicking it never steals focus; text inputs opt in.
     if (on) {
       focusRequestedAt = Date.now();
-      island.setFocusable(true);
+      setIslandFocusable(true);
       // Windows' foreground lock blocks focus() from a background app (and isFocused() may still
       // report true), so ask the helper to bring the island to the foreground.
       if (ctx.sys) {
         const hb = island.getNativeWindowHandle();
         ctx.sys.send({ c: 'focusHwnd', h: hb.length >= 8 ? Number(hb.readBigUInt64LE(0)) : hb.readUInt32LE(0) });
       }
-    } else if (island.isFocusable()) { island.setFocusable(false); }
+    } else if (island.isFocusable()) { setIslandFocusable(false); }
     applyIgnore();
     return;
   }
@@ -463,6 +463,13 @@ let dwellSince = 0;
 const TUCKED = ['shrink', 'peek', 'browser'];
 ctx.handle('log', (...a) => { dlog('[renderer]', ...a.slice(0, -1)); });
 ctx.handle('rects', (rects) => { hitRects = Array.isArray(rects) ? rects : []; return true; });
+// setFocusable() rewrites the window's extended style (dropping WS_EX_TOOLWINDOW), which made the
+// island appear in the taskbar where "Close window" could target it. Re-assert skipTaskbar every time.
+function setIslandFocusable(on) {
+  if (!islandAlive()) return;
+  island.setFocusable(on);
+  island.setSkipTaskbar(true);
+}
 // setFocusable() rewrites the window's extended style, so re-assert click-through state afterwards.
 function applyIgnore() {
   if (!islandAlive()) return;
@@ -521,7 +528,18 @@ ctx.handle('showItem', (p) => shell.showItemInFolder(p));
 ctx.handle('openExternal', (u) => { if (/^(https?|ms-settings|zoommtg|msteams):/i.test(u)) shell.openExternal(u); });
 ctx.handle('displays', () => screen.getAllDisplays().map((d, i) => ({ id: String(d.id), label: `${i + 1}: ${d.size.width}×${d.size.height}${d.id === screen.getPrimaryDisplay().id ? ' (utama)' : ''}` })));
 ctx.handle('paths', () => ({ ...paths, pictures: app.getPath('pictures'), videos: app.getPath('videos'), downloads: app.getPath('downloads'), appDir: APP_DIR }));
-ctx.handle('quit', () => quit());
+// Settings' "Quit" button: confirm first so a stray click never ends RA Assistant.
+ctx.handle('quit', async () => {
+  const id = settings.get('lang') !== 'en';
+  const opts = {
+    type: 'question', buttons: id ? ['Keluar', 'Batal'] : ['Quit', 'Cancel'], defaultId: 1, cancelId: 1, noLink: true,
+    title: 'RA Assistant', message: id ? 'Keluar dari RA Assistant?' : 'Quit RA Assistant?',
+    detail: id ? 'Island akan hilang sampai RA Assistant dibuka lagi.' : 'The island will be gone until RA Assistant is started again.'
+  };
+  const parent = settingsWin && !settingsWin.isDestroyed() ? settingsWin : undefined;
+  const r = parent ? await dialog.showMessageBox(parent, opts) : await dialog.showMessageBox(opts);
+  if (r.response === 0) quit('settings'); else evlog('quit cancelled (settings)');
+});
 
 settings.onChange((p, v) => {
   if (p === 'lang') { i18n.setLang(v); rebuildTrayMenu(); }
@@ -586,10 +604,10 @@ function loadFeatures() {
   }
 }
 
-function quit() {
+function quit(src) {
   if (quitting) return;
   quitting = true;
-  evlog('quit');
+  evlog('quit (' + (src || 'unknown') + ')');
   bus.emit('quit');
   settings.flush(); data.flush();
   if (ctx.sys) ctx.sys.stop();
@@ -640,7 +658,15 @@ app.on('second-instance', (e, argv) => {
   try { openSettings(); } catch (err) { errlog('openSettings', err); }
 });
 app.on('window-all-closed', (e) => { /* keep running in tray */ });
-app.on('before-quit', () => { quitting = true; });
+// Only quit() (tray / confirmed Settings button) may end RA; any other app.quit() path is refused.
+// Windows logoff/shutdown is allowed through via 'session-end'.
+app.on('session-end', () => { evlog('session end'); quitting = true; });
+app.on('before-quit', (e) => {
+  if (quitting) return;
+  e.preventDefault();
+  evlog('before-quit blocked (not from tray)');
+  restoreIsland('blocked quit');
+});
 app.on('render-process-gone', (e, wc, d) => { if (!islandAlive() || wc !== island.webContents) evlog(`renderer gone (${d.reason})`); });
 app.on('child-process-gone', (e, d) => evlog(`child process gone: ${d.type} ${d.reason}`));
 
