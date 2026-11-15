@@ -2,11 +2,27 @@
 
 Island desktop ("dynamic island") untuk Windows 11 dengan maskot **Rara**. Ringan, semua data lokal, tanpa akun.
 
-Dibangun dengan Electron + JavaScript biasa. Agar lolos **Smart App Control (SAC)**, aplikasi selalu dijalankan
-lewat `electron.exe` **bawaan paket npm** (tidak di-repack / tidak di-rename), dan semua fitur khusus Windows memakai
-satu proses helper PowerShell (WinRT/COM) — tanpa modul native atau .exe/.dll buatan sendiri.
+Dibangun dengan Electron + JavaScript biasa. Semua fitur khusus Windows memakai satu proses helper PowerShell
+(WinRT/COM) — tanpa modul native. Tersedia sebagai installer `.exe` atau dijalankan dari kode sumber.
 
-## Menjalankan
+## Instal (.exe) — cara termudah
+
+1. Unduh **`RA Assistant Setup 0.2.0.exe`** dari halaman
+   [Releases](https://github.com/AndiRasyihan/RAAssistant/releases) (atau buat sendiri, lihat di bawah).
+2. Jalankan. Installer **tidak perlu admin**: dipasang untuk akun Anda saja di
+   `%LOCALAPPDATA%\Programs\RA Assistant`, plus pintasan Start Menu & Desktop.
+3. Installer belum ditandatangani secara digital, jadi Windows SmartScreen bisa menampilkan
+   *"Windows protected your PC"* → klik **More info → Run anyway**. Bila **Smart App Control** aktif, aplikasi tanpa
+   tanda tangan bisa diblokir; gunakan cara "dari kode sumber" di bawah (versi `electron.exe` bawaan lolos SAC).
+4. RA berjalan otomatis setelah dipasang dan setiap Windows dinyalakan (bisa dimatikan di *Pengaturan → Umum*).
+
+**Mencopot**: *Settings → Apps → Installed apps → RA Assistant → Uninstall*. Folder program, semua pintasan (termasuk
+autostart) dan entri registry dihapus; installer bertanya apakah pengaturan & data (`%APPDATA%\RAAssistant`,
+`%LOCALAPPDATA%\RAAssistant`) juga ikut dihapus.
+
+Membuat installer sendiri: `npm install` lalu `npm run dist` → `dist\RA Assistant Setup <versi>.exe`.
+
+## Menjalankan dari kode sumber (pengembang / Smart App Control aktif)
 
 Prasyarat: Windows 10/11, [Node.js](https://nodejs.org) LTS, dan Git.
 
@@ -15,19 +31,19 @@ git clone https://github.com/AndiRasyihan/RAAssistant.git
 cd RAAssistant
 npm install          # sekali saja; mengunduh electron & qrcode
 npm start            # menjalankan RA Assistant
+npm test             # 28 unit test (jadwal sholat vs Kemenag, OTP, lirik, waktu layar, dll.)
 ```
 
-Saat pertama kali dijalankan, RA otomatis membuat:
+Pada versi kode sumber, RA membuat pintasan **Start Menu** dan **Startup** yang menunjuk ke
+`node_modules\electron\dist\electron.exe "<folder proyek>"` (lolos SAC). Buat ulang manual: `npm run install-shortcuts`.
+Jika versi `.exe` sudah terpasang, versi terpasang mengambil alih pintasan sehingga hanya satu RA yang berjalan.
 
-- Pintasan **Start Menu** → `RA Assistant`
-- Pintasan **Startup** (jalan otomatis saat Windows mulai) — bisa dimatikan di *Pengaturan → Umum*
+Island **tidak bisa ditutup** dengan Alt+F4 / "End task" (agar notch tidak hilang); bila crash, island dibuat ulang
+otomatis. Keluar sepenuhnya hanya lewat ikon tray → **Keluar** (atau *Pengaturan → Umum → Keluar*). Menjalankan RA lagi
+saat sudah berjalan memunculkan island dan membuka **Pengaturan**. Kejadian seperti ini dicatat di
+`%APPDATA%\RAAssistant\events.log`; error di `error.log`.
 
-Kedua pintasan menunjuk ke `node_modules\electron\dist\electron.exe "<folder proyek>"`, jadi SAC tetap mengizinkan.
-Untuk membuat ulang pintasan secara manual: `npm run install-shortcuts`.
-
-Menjalankan RA lagi saat sudah berjalan akan membuka jendela **Pengaturan**. Pengaturan juga bisa dibuka dari ikon tray
-(klik kanan) atau ikon ⚙ di island.
-
+Hasil pengujian lengkap: [docs/TESTING.md](docs/TESTING.md).
 ## Cara pakai island
 
 | Gestur | Aksi |
@@ -135,9 +151,10 @@ Perintah `RA Agent Bridge: Show status` di editor menampilkan status koneksi.
 - Jendela Pengaturan dihancurkan saat ditutup; overlay lirik/pil hanya dibuat saat dibutuhkan.
 - Animasi island memakai CSS; render ulang hanya bila isi berubah.
 
-## Keterbatasan (karena Smart App Control / Windows)
+## Keterbatasan
 
-- Tidak ada `.exe` installer sendiri; RA berjalan lewat `electron.exe` resmi (lihat pintasan).
+- Installer `.exe` belum ditandatangani secara digital (SmartScreen memperingatkan; Smart App Control bisa memblokir —
+  pakai versi kode sumber bila SAC aktif).
 - Menjawab Copilot app memakai UI Automation (bergantung pada tampilan aplikasi Copilot; bisa berubah saat aplikasi
   diperbarui). Aplikasi agen Antigravity (non-IDE) belum bisa dijawab dari luar.
 - Suhu CPU sebenarnya butuh hak admin, jadi reaksi "kepanasan" memakai beban CPU tinggi berkelanjutan.
