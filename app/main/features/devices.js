@@ -118,7 +118,12 @@ function init(ctx) {
   const S = () => ctx.settings().devices || {};
   const quietUntil = { v: Date.now() + 15000 }; // startup: take baselines silently
   const quiet = () => Date.now() < quietUntil.v;
-  const notify = (dev) => { ctx.dlog && ctx.dlog('device', dev, quiet() ? '(quiet)' : ''); if (!quiet()) ctx.toast({ kind: 'device', dev, title: dev.name || dev.type, ms: dev.on === false ? 3500 : 4500 }); };
+  const notify = (dev) => {
+    ctx.dlog && ctx.dlog('device', dev, quiet() ? '(quiet)' : '');
+    if (quiet()) return;
+    ctx.evlog && ctx.evlog(`device ${dev.type}${dev.kind ? '/' + dev.kind : ''} ${dev.on === false ? 'off' : 'on'}`);
+    ctx.toast({ kind: 'device', dev, title: dev.name || dev.type, ms: dev.on === false ? 3500 : 4500 });
+  };
 
   // ---- plug & play
   let snap = null;
@@ -197,6 +202,7 @@ function init(ctx) {
   ];
   const demo = () => DEMO.forEach((dev, i) => setTimeout(() => ctx.toast({ kind: 'device', dev, title: dev.name || dev.type, ms: 2600, force: true }), i * 50));
   ctx.handle('devices.demo', demo);
+  ctx.handle('devices.log', (msg) => { if (typeof msg === 'string' && /^device charger (on|off) \d{1,3}%$/.test(msg)) ctx.evlog(msg); });
   ctx.bus.on('devices:demo', demo);
 }
 

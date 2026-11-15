@@ -104,8 +104,15 @@ Perintah `RA Agent Bridge: Show status` di editor menampilkan status koneksi.
   klik (tidak masuk riwayat clipboard).
 - **Rapat**: deteksi otomatis saat aplikasi rapat memakai kamera/mik >6 detik (musik dijeda, notifikasi ditahan lalu
   diringkas), tombol bisukan **semua** mikrofon, titik hijau (kamera) / oranye (mik).
-- **Kabar sistem**: earbuds Bluetooth tersambung + baterai, unduhan Chrome/Edge/Firefox, internet putus/tersambung
+- **Kabar sistem**: unduhan Chrome/Edge/Firefox, internet putus/tersambung
   (dengan lama putus), tawaran melanjutkan musik setelah kunci/tidur ≥5 menit.
+- **Animasi perangkat & koneksi**: charger dicolok (baterai terisi + persen naik) / dicabut; Wi‑Fi tersambung
+  (nama jaringan + kekuatan sinyal) / terputus, kabel LAN; Bluetooth tersambung/terputus dengan gambar sesuai jenis
+  (headphone, earbuds TWS, speaker, mouse, keyboard, ponsel, stik game, jam) + persen baterai bila Windows
+  menyediakannya; USB / Type‑C dicolok/dicabut (mouse, keyboard, flashdisk/HDD + huruf drive, ponsel, kamera, audio
+  USB, tethering); monitor eksternal (HDMI, DisplayPort / USB‑C, Miracast). Per jenis bisa dimatikan dan ada tombol
+  **Putar demo** di *Pengaturan → Rapat & Notifikasi → Perangkat & koneksi*. Berbasis event Windows (bukan polling),
+  jadi helper tetap ±0,06 % CPU.
 - **Ibadah**: jadwal sholat offline kriteria Kemenag (JAKIM untuk Malaysia) — sudah dicocokkan dengan jadwal resmi;
   hitung mundur 10 menit; adzan (suara bawaan CC0, bisa pilih file sendiri) dengan jeda musik; Imsak & berbuka saat
   Ramadan (kalender Umm al-Qura); mode jadwal ibadah mingguan kustom.
@@ -163,6 +170,9 @@ Perintah `RA Agent Bridge: Show status` di editor menampilkan status koneksi.
 - Fitur ponsel butuh jaringan Wi‑Fi bertipe **Pribadi** (Pengaturan → Jaringan & Internet → Wi‑Fi → Properti).
 - Libur nasional: tanggal Islam memakai kalender Umm al-Qura (keputusan sidang isbat bisa berbeda satu hari); cuti
   bersama tidak termasuk.
+- Baterai Bluetooth: Windows hanya memberi **satu** angka per perangkat, jadi baterai kiri/kanan/case earbuds tidak
+  bisa dipisah; sebagian perangkat tidak melaporkan baterai sama sekali. Port Type‑C tidak bisa dibedakan dari USB-A
+  oleh Windows, kecuali monitor lewat USB‑C (tampil sebagai DisplayPort / USB‑C).
 
 ## Data & privasi
 

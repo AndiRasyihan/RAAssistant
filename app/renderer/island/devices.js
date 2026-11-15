@@ -116,6 +116,7 @@
     const prev = RA._lastBat; RA._lastBat = { ...b };
     if (!prev || prev.charging === b.charging) return;
     if (!RA.S.devices || RA.S.devices.charger === false) return;
+    RA.invoke('devices.log', `device charger ${b.charging ? 'on' : 'off'} ${Math.round(b.level * 100)}%`);
     RA.emit('toast', { kind: 'device', dev: { type: 'charger', level: b.level, on: b.charging }, title: 'charger', ms: b.charging ? 4500 : 3500 });
   });
 })();

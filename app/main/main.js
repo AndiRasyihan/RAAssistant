@@ -74,6 +74,7 @@ const ctx = {
   },
   getState: (k) => stateCache[k],
   dlog: (...a) => dlog(...a),
+  evlog: (m) => evlog(m),
   handle(name, fn) { handlers[name] = fn; },
   island: () => island,
   toast(item) { ctx.state('toast', { id: Date.now() + Math.random(), at: Date.now(), ...item }); },
@@ -658,6 +659,23 @@ app.on('second-instance', (e, argv) => {
   if ((argv || []).some((a) => a.startsWith('--listen-test='))) return;
   if ((argv || []).includes('--qa-stress')) { qaStress().catch((err) => errlog('qa', err)); return; }
   const qs = (argv || []).find((a) => a.startsWith('--qa-settings='));
+  if ((argv || []).includes('--qa-tabs')) {
+    // Opens every island tab in turn and saves a frame of each to %TEMP%\ra_tabs\<tab>.png.
+    (async () => {
+      const dir = path.join(require('os').tmpdir(), 'ra_tabs');
+      try { fs.mkdirSync(dir, { recursive: true }); } catch {}
+      const ids = await island.webContents.executeJavaScript('RA.visibleTabs().map((t) => t.id)');
+      for (const id of ids) {
+        await island.webContents.executeJavaScript(`RA.pins++; RA.expand(true, ${JSON.stringify(id)}); 1`);
+        await new Promise((r) => setTimeout(r, 1200));
+        const img = await island.webContents.capturePage();
+        fs.writeFileSync(path.join(dir, id + '.png'), img.toPNG());
+      }
+      await island.webContents.executeJavaScript('RA.pins = 0; RA.expand(false); 1');
+      evlog('qa tabs: ' + ids.join(','));
+    })().catch((err) => errlog('qa-tabs', err));
+    return;
+  }
   if (qs) {
     const [sec, pos] = qs.split('=')[1].split(':');
     openSettings(sec);

@@ -1,7 +1,7 @@
 {
   "name": "ra-assistant",
   "productName": "RA Assistant",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "RA Assistant - island desktop untuk Windows 11",
   "main": "app/main/main.js",
   "private": true,
