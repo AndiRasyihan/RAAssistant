@@ -23,6 +23,7 @@ Status: ✅ lulus · ⚠️ lulus dengan catatan · ❌ gagal · ⏭️ belum di
 | 5 | Autostart **ON** di pengaturan tetapi pintasan Startup hilang → RA tidak ikut menyala saat Windows mulai | Versi terpasang menyinkronkan pintasan Startup dengan pengaturan setiap kali dibuka |
 | 6 | Animasi (running text, mata maskot, equalizer) tetap berjalan saat island tersembunyi/mengecil → CPU terbuang | Animasi dijeda saat tidak terlihat |
 | 7 | Island ikut memperbarui UI setiap kali log agen berubah walau isinya sama | Pembaruan agen hanya dikirim bila ada yang berubah |
+| 9 | Animasi terus-menerus (pendar tema, spinner, titik berpikir, kedip mata) digambar ulang 60×/detik tanpa GPU → renderer ±1,9 % CPU | Animasi latar kini bertahap 6–12 fps; renderer turun ke ±0,8 % |
 | 8 | Island bisa "macet terbuka" setelah mengetik/menyeret di luar island; File Explorer selebar layar dianggap layar penuh | (perubahan tertunda yang sudah ada, diperiksa & di-commit) |
 
 ## Ketahanan & sumber daya (versi terpasang)
@@ -30,7 +31,7 @@ Status: ✅ lulus · ⚠️ lulus dengan catatan · ❌ gagal · ⏭️ belum di
 | Item | Hasil |
 | --- | --- |
 | Memori saat diam | ±170 MB private (RA Assistant.exe + helper) ✅ |
-| CPU saat diam | main 0,05 %, helper PowerShell 0,06 %, renderer ±1–2 % saat agen Copilot sedang aktif menulis log ⚠️ |
+| CPU saat diam | main 0,05 %, helper PowerShell 0,06–0,08 %, renderer ±0,8 % (sebelumnya ±1,9 %) dengan tema Pendar Sampul + agen Copilot aktif ✅ |
 | Stres 2.700 event ×3 putaran | renderer stabil ±164 MB setelah pemanasan pertama, heap main 6–7 MB, listener bus tetap 28, handler IPC tetap 70 ✅ |
 | Dengar (Whisper) | Hanya hidup saat mendengarkan (±0,6–1 GB), dilepas saat berhenti ✅ |
 
