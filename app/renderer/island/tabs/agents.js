@@ -77,8 +77,7 @@
         } else act(key, type, b.dataset.v, b);
       });
       p.addEventListener('mousedown', (e) => { if (e.target.tagName === 'INPUT') window.ra.focus(true); });
-      p.addEventListener('focusin', (e) => { if (e.target.tagName === 'INPUT') RA.pin(1); });
-      p.addEventListener('focusout', (e) => { if (e.target.tagName === 'INPUT') { RA.pin(-1); if (RA.agentsDirty) { RA.agentsDirty = false; setTimeout(render, 50); } } });
+      p.addEventListener('focusout', (e) => { if (e.target.tagName === 'INPUT') { if (RA.agentsDirty) { RA.agentsDirty = false; setTimeout(render, 50); } } });
       p.addEventListener('input', (e) => { if (e.target.classList.contains('reply')) drafts[e.target.dataset.key] = e.target.value; });
       p.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.classList.contains('reply')) e.target.parentElement.querySelector('[data-act=reply]').click(); });
       render();

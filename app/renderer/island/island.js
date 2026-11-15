@@ -50,7 +50,7 @@
     RA.emit('settings', { S, changed });
     RA.refresh();
   });
-  window.ra.on('ra:blur', () => { if (!RA.pointerInside && !RA.pins) RA.expand(false); });
+  window.ra.on('ra:blur', () => { if (!RA.pointerInside && !RA.keepOpen()) RA.expand(false); });
 
   RA.on('layout', (v) => { RA.layoutNotch = !!v.notch; applyLook(); setMode(v.mode); });
   RA.on('zoom', (k) => { RA.zoom = k; RA.size(); });

@@ -226,10 +226,17 @@
       if (toastShowing && toastShowing.interactive) return; // let the user click the answer in place
       hoverT = setTimeout(() => RA.expand(true), 160);
     } else {
-      leaveT = setTimeout(() => { if (!RA.pins && !RA.pointerInside) RA.expand(false); }, 450);
+      leaveT = setTimeout(() => { if (!RA.keepOpen() && !RA.pointerInside) RA.expand(false); }, 450);
     }
   };
-  RA.pin = (d) => { RA.pins = Math.max(0, RA.pins + d); if (!RA.pins && !RA.pointerInside) RA.setPointer(false); };
+  RA.pin = (d) => { RA.pins = Math.max(0, RA.pins + d); if (!RA.keepOpen() && !RA.pointerInside) RA.setPointer(false); };
+  // Typing is read from the live focus (not counted) so a re-rendered input can't leave the island stuck open.
+  const typing = () => {
+    const a = document.activeElement;
+    return document.hasFocus() && !!a && a.matches('input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea');
+  };
+  RA.keepOpen = () => RA.pins > 0 || typing();
+  document.addEventListener('focusout', () => setTimeout(() => { if (RA.expanded && !RA.keepOpen() && !RA.pointerInside) RA.setPointer(false); }, 0));
 
   RA.expand = (on, tab) => {
     if (tab) RA.showTab(tab);

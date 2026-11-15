@@ -34,6 +34,7 @@
       let held = false;
       p.addEventListener('mousedown', (e) => { if (e.target.type === 'range') { held = true; RA.pin(1); } });
       window.addEventListener('mouseup', () => { if (held) { held = false; RA.pin(-1); } });
+      RA.on('pointer', (v) => { if (!v.inside && held) { held = false; RA.pin(-1); } });
       render();
     },
     onShow: render

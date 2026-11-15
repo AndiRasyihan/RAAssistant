@@ -83,8 +83,6 @@
     render(p) {
       pane = p;
       p.addEventListener('mousedown', (e) => { if (e.target.matches('input:not([type=checkbox]), select')) window.ra.focus(true); });
-      p.addEventListener('focusin', (e) => { if (e.target.matches('input:not([type=checkbox]), select')) RA.pin(1); });
-      p.addEventListener('focusout', (e) => { if (e.target.matches('input:not([type=checkbox]), select')) RA.pin(-1); });
       p.addEventListener('click', (e) => {
         const b = e.target.closest('[data-mon]'); if (b) { viewMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + +b.dataset.mon, 1); render(); return; }
         const day = e.target.closest('[data-day]'); if (day) { selDay = selDay === day.dataset.day ? null : day.dataset.day; render(); return; }

@@ -53,8 +53,6 @@
       p.addEventListener('dblclick', (e) => { const f = e.target.closest('.file'); if (f) RA.invoke('shelf.open', f.dataset.id); });
       p.addEventListener('dragstart', (e) => { const f = e.target.closest('.file'); if (!f) return; e.preventDefault(); window.ra.dragOut(f.dataset.path); });
       p.addEventListener('mousedown', (e) => { if (e.target.tagName === 'INPUT') window.ra.focus(true); });
-      p.addEventListener('focusin', (e) => { if (e.target.tagName === 'INPUT') RA.pin(1); });
-      p.addEventListener('focusout', (e) => { if (e.target.tagName === 'INPUT') RA.pin(-1); });
       p.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('[data-ptext]')) p.querySelector('[data-psend]').click(); });
       render();
     },

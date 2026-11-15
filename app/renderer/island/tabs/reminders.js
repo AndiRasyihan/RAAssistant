@@ -25,8 +25,7 @@
     render(p) {
       pane = p;
       p.addEventListener('mousedown', (e) => { if (e.target.matches('input, select')) window.ra.focus(true); });
-      p.addEventListener('focusin', (e) => { if (e.target.matches('input, select')) RA.pin(1); });
-      p.addEventListener('focusout', (e) => { if (e.target.matches('input, select')) { RA.pin(-1); setTimeout(render, 50); } });
+      p.addEventListener('focusout', (e) => { if (e.target.matches('input, select')) setTimeout(render, 50); });
       p.addEventListener('click', (e) => {
         const rm = e.target.closest('[data-rm]'); if (rm) { RA.invoke('reminders.remove', rm.dataset.rm); return; }
         if (e.target.closest('[data-add]')) {

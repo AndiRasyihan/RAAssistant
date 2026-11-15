@@ -132,7 +132,9 @@ namespace RAH {
       var mi = new MONITORINFO(); mi.cbSize = Marshal.SizeOf(mi);
       GetMonitorInfo(MonitorFromWindow(h, 2), ref mi);
       bool shell = c == "Progman" || c == "WorkerW" || c == "Shell_TrayWnd" || c == "Windows.UI.Core.CoreWindow";
-      bool full = !shell && !IsZoomed(h) && r.L <= mi.rcMonitor.L && r.T <= mi.rcMonitor.T && r.R >= mi.rcMonitor.R && r.B >= mi.rcMonitor.B;
+      // File Explorer windows can span the whole monitor without being maximized; never treat them as fullscreen content.
+      bool explorer = c == "CabinetWClass" || c == "ExploreWClass";
+      bool full = !shell && !explorer && !IsZoomed(h) && r.L <= mi.rcMonitor.L && r.T <= mi.rcMonitor.T && r.R >= mi.rcMonitor.R && r.B >= mi.rcMonitor.B;
       bool top = !shell && r.T <= mi.rcWork.T + 4 && (r.R - r.L) >= (mi.rcWork.R - mi.rcWork.L) / 2;
       int q; SHQueryUserNotificationState(out q);
       return lastExe + "|" + (full ? 1 : 0) + "|" + (top ? 1 : 0) + "|" + q + "|" + mi.rcMonitor.L + "," + mi.rcMonitor.T;

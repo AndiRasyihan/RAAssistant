@@ -144,6 +144,8 @@
       p.addEventListener('mousedown', (e) => { if (e.target.closest('.prog') && RA.S.music.gestures) { drag = true; RA.pin(1); seekAt(e); } });
       window.addEventListener('mousemove', (e) => { if (drag) seekAt(e); });
       window.addEventListener('mouseup', (e) => { if (drag) { drag = false; RA.pin(-1); seekAt(e, true); } });
+      // Outside the island the window is click-through, so a release there never arrives as mouseup.
+      RA.on('pointer', (v) => { if (!v.inside && drag) { drag = false; RA.pin(-1); } });
       render();
     },
     onShow() { render(); if (!raf) loop(); },
