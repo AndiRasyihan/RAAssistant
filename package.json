@@ -1,22 +1,79 @@
 {
-    "name":  "ra-assistant",
-    "productName":  "RA Assistant",
-    "version":  "0.1.0",
-    "description":  "RA Assistant - island desktop untuk Windows 11",
-    "main":  "app/main/main.js",
-    "private":  true,
-    "scripts":  {
-                    "start":  "electron .",
-                    "install-shortcuts":  "electron . --install-shortcuts",
-                    "test":  "node --test \"test/*.test.js\"",
-                    "qa:lifecycle":  "node scripts/qa-lifecycle.js"
-                },
-    "license":  "UNLICENSED",
-    "type":  "commonjs",
-    "devDependencies":  {
-                            "electron":  "^45.3.0"
-                        },
-    "dependencies":  {
-                         "qrcode":  "^1.5.4"
-                     }
+  "name": "ra-assistant",
+  "productName": "RA Assistant",
+  "version": "0.2.0",
+  "description": "RA Assistant - island desktop untuk Windows 11",
+  "main": "app/main/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "install-shortcuts": "electron . --install-shortcuts",
+    "test": "node --test \"test/*.test.js\"",
+    "qa:lifecycle": "node scripts/qa-lifecycle.js",
+    "dist": "electron-builder --win nsis --x64"
+  },
+  "license": "UNLICENSED",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^45.3.0",
+    "electron-builder": "^26.18.0"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  },
+  "build": {
+    "appId": "RA.Assistant",
+    "productName": "RA Assistant",
+    "copyright": "RA Assistant",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "app/**/*",
+      "extension/ra-agent-bridge/**/*",
+      "package.json",
+      "!**/*.md",
+      "app/assets/adzan/CREDITS.txt"
+    ],
+    "asarUnpack": [
+      "app/ps/**",
+      "app/assets/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "app/assets/icon.ico",
+      "executableName": "RA Assistant",
+      "requestedExecutionLevel": "asInvoker",
+      "signAndEditExecutable": true
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "RA Assistant",
+      "uninstallDisplayName": "RA Assistant",
+      "runAfterFinish": true,
+      "include": "build/installer.nsh",
+      "installerIcon": "app/assets/icon.ico",
+      "uninstallerIcon": "app/assets/icon.ico",
+      "language": "1057",
+      "multiLanguageInstaller": false,
+      "deleteAppDataOnUninstall": false
+    },
+    "electronLanguages": [
+      "en-US",
+      "id"
+    ]
+  }
 }

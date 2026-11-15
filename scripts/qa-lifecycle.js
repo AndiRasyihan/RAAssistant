@@ -6,6 +6,9 @@ const fs = require('fs');
 const path = require('path');
 
 const EV = path.join(process.env.APPDATA, 'RAAssistant', 'events.log');
+// Works for the installed build (RA Assistant.exe) and the dev copy (electron.exe <repo>).
+const PROCS = "Get-CimInstance Win32_Process | ? { $_.Name -eq 'RA Assistant.exe' -or ($_.Name -eq 'electron.exe' -and $_.CommandLine -match 'RAAssistant') }";
+const MAIN = `${PROCS} | ? { $_.CommandLine -notmatch '--type=' }`;
 const ps = (cmd) => execFileSync('powershell.exe', ['-NoProfile', '-Command', cmd], { encoding: 'utf8' }).trim();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -18,12 +21,12 @@ public static IntPtr Find(int pid){IntPtr f=IntPtr.Zero;EnumWindows((h,l)=>{int 
 "@`;
 
 function mainPid() {
-  const out = ps(`Get-CimInstance Win32_Process -Filter "Name='electron.exe'" | ? { $_.CommandLine -match 'RAAssistant' -and $_.CommandLine -notmatch '--type=' } | % ProcessId`);
+  const out = ps(`${MAIN} | % ProcessId`);
   return out ? +out.split(/\s+/)[0] : 0;
 }
 function islandHwnd(pid) { return +ps(`${WIN}; [int64][QW]::Find(${pid})`); }
 function rendererPid() {
-  const out = ps(`Get-CimInstance Win32_Process -Filter "Name='electron.exe'" | ? { $_.CommandLine -match '--type=renderer' -and $_.CommandLine -match 'RAAssistant' } | sort CreationDate | % ProcessId`);
+  const out = ps(`${PROCS} | ? { $_.CommandLine -match '--type=renderer' } | sort CreationDate | % ProcessId`);
   return out ? out.split(/\s+/).map(Number) : [];
 }
 async function waitIsland(pid, ms = 15000) {
@@ -49,12 +52,15 @@ async function waitIsland(pid, ms = 15000) {
   await sleep(1000);
   check('island recreated after renderer killed', await waitIsland(pid, 20000) && mainPid() === pid);
 
-  // 3. Second launch restores it and keeps a single instance.
-  const exe = path.join(__dirname, '..', 'node_modules', 'electron', 'dist', 'electron.exe');
+  // 3. Second launch restores it and keeps a single instance (uses the same build that is running).
+  const installed = path.join(process.env.LOCALAPPDATA, 'Programs', 'RA Assistant', 'RA Assistant.exe');
+  const dev = path.join(__dirname, '..', 'node_modules', 'electron', 'dist', 'electron.exe');
+  const runningInstalled = ps(`${MAIN} | % Name`) === 'RA Assistant.exe';
+  const exe = runningInstalled ? installed : dev;
   if (fs.existsSync(exe)) {
-    spawn(exe, [path.join(__dirname, '..')], { detached: true, stdio: 'ignore' }).unref();
+    spawn(exe, runningInstalled ? [] : [path.join(__dirname, '..')], { detached: true, stdio: 'ignore' }).unref();
     await sleep(5000);
-    const mains = ps(`(Get-CimInstance Win32_Process -Filter "Name='electron.exe'" | ? { $_.CommandLine -match 'RAAssistant' -and $_.CommandLine -notmatch '--type=' } | Measure-Object).Count`);
+    const mains = ps(`(${MAIN} | Measure-Object).Count`);
     check('second launch keeps one instance', +mains === 1, mains + ' main process(es)');
     check('island present after second launch', await waitIsland(pid));
     // 4. Closing the Settings window (opened by the second launch) leaves the island alone.

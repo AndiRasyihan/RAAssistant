@@ -134,7 +134,7 @@
     return [
       group('', 
         item(L('Bahasa', 'Language'), L('Berganti langsung tanpa restart.', 'Switches instantly, no restart.'), seg('lang', [['id', 'Bahasa Indonesia'], ['en', 'English']], () => setTimeout(renderAll, 50))),
-        item(L('Jalankan saat Windows mulai', 'Start with Windows'), L('Membuat pintasan di folder Startup yang menjalankan electron.exe bawaan (aman untuk Smart App Control).', 'Creates a Startup-folder shortcut to the stock electron.exe (Smart App Control friendly).'), toggle('autostart')),
+        item(L('Jalankan saat Windows mulai', 'Start with Windows'), L('Membuat pintasan RA Assistant di folder Startup Windows.', 'Adds an RA Assistant shortcut to the Windows Startup folder.'), toggle('autostart')),
         item(L('Data lokal', 'Local data'), L('Semua data disimpan di laptop ini. Tanpa akun, tanpa cloud.', 'Everything stays on this laptop. No account, no cloud.'), row(
           button(L('Buka folder data', 'Open data folder'), async () => { const p = await RA.invoke('paths'); RA.invoke('openPath', p.userData); }))),
         item(L('Keluar dari RA Assistant', 'Quit RA Assistant'), '', button(RA.t('tray.quit'), () => RA.invoke('quit')))

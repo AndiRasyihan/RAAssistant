@@ -37,9 +37,13 @@ process.on('unhandledRejection', (e) => errlog('unhandled', e));
 
 const ROOT = path.join(__dirname, '..');
 const APP_DIR = path.join(ROOT, '..');
-const ASSETS = path.join(ROOT, 'assets');
+const PACKAGED = app.isPackaged;
+// Files that other programs (PowerShell, Windows shell) must open live outside app.asar.
+const unpacked = (p) => p.replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
+const ASSETS = unpacked(path.join(ROOT, 'assets'));
+const PS_DIR = unpacked(path.join(ROOT, 'ps'));
 const OFFICE = ['winword.exe', 'excel.exe', 'powerpnt.exe', 'outlook.exe', 'olk.exe', 'onenote.exe', 'msaccess.exe', 'mspub.exe', 'visio.exe'];
-const SELF_EXES = ['electron.exe'];
+const SELF_EXES = [...new Set(['electron.exe', 'ra assistant.exe', path.basename(process.execPath).toLowerCase()])];
 
 const paths = {
   userData: app.getPath('userData'),
@@ -358,10 +362,30 @@ function shortcutPaths() {
   return { start: path.join(programs, 'RA Assistant.lnk'), startup: path.join(programs, 'Startup', 'RA Assistant.lnk') };
 }
 function shortcutSpec() {
+  // Installed build: the shortcut runs "RA Assistant.exe" directly. Dev copy: stock electron.exe + app folder.
+  if (PACKAGED) {
+    return { target: process.execPath, args: '', cwd: path.dirname(process.execPath), description: 'RA Assistant', icon: process.execPath, iconIndex: 0, appUserModelId: 'RA.Assistant' };
+  }
   return {
     target: process.execPath, args: `"${APP_DIR}"`, cwd: APP_DIR, description: 'RA Assistant',
     icon: path.join(ASSETS, 'icon.ico'), iconIndex: 0, appUserModelId: 'RA.Assistant'
   };
+}
+// A shortcut is stale when it launches another copy of RA (e.g. the old dev copy after installing the .exe).
+function shortcutStale(file) {
+  try {
+    const l = shell.readShortcutLink(file), s = shortcutSpec();
+    return path.resolve(l.target).toLowerCase() !== path.resolve(s.target).toLowerCase() || (l.args || '') !== s.args;
+  } catch { return true; }
+}
+// Installed build owns the shortcuts: repoint any that still start the dev copy, so only one RA starts.
+function healShortcuts() {
+  const p = shortcutPaths();
+  if (fs.existsSync(p.start) && shortcutStale(p.start)) { evlog('repoint Start Menu shortcut'); ensureShortcuts(); return; }
+  // The autostart shortcut must match the setting (it can go missing, or still start the dev copy).
+  const want = !!settings.get('autostart'), has = fs.existsSync(p.startup);
+  if (want !== has || (has && shortcutStale(p.startup))) { evlog(`sync autostart shortcut (want ${want}, had ${has})`); setAutostart(want); }
+  cleanStrayShortcut();
 }
 function ensureShortcuts() {
   const p = shortcutPaths();
@@ -375,7 +399,9 @@ function cleanStrayShortcut() {
     const stray = path.join(path.dirname(shortcutPaths().start), 'Electron.lnk');
     if (!fs.existsSync(stray)) return;
     const l = shell.readShortcutLink(stray);
-    if (path.resolve(l.target).toLowerCase() === path.resolve(process.execPath).toLowerCase() && !l.args) fs.unlinkSync(stray);
+    const t = path.resolve(l.target).toLowerCase();
+    const ours = t === path.resolve(process.execPath).toLowerCase() || /raassistant[\\/]node_modules[\\/]electron[\\/]/.test(t);
+    if (ours && !l.args) fs.unlinkSync(stray);
   } catch (e) { errlog('shortcut-cleanup', e); }
 }
 function setAutostart(on) {
@@ -510,7 +536,7 @@ settings.onChange((p, v) => {
 
 // ------------------------------------------------------------------ system helper
 function startSystemHelper() {
-  const sys = new PSHelper(path.join(ROOT, 'ps', 'sys.ps1'));
+  const sys = new PSHelper(path.join(PS_DIR, 'sys.ps1'));
   ctx.sys = sys;
   sys.on('fg', (m) => {
     if (SELF_EXES.includes(m.exe)) return; // our own windows got focus; keep previous decision
@@ -540,7 +566,7 @@ function startSystemHelper() {
   ctx.focusApp = (exe, title) => { sys.send({ c: 'focus', exe: exe.toLowerCase(), title: title || '' }); return { ok: true }; };
   ctx.uia = (req) => new Promise((resolve) => {
     const { spawn } = require('child_process');
-    const p = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', path.join(ROOT, 'ps', 'uia.ps1')], { windowsHide: true });
+    const p = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', path.join(PS_DIR, 'uia.ps1')], { windowsHide: true });
     let out = '';
     const t = setTimeout(() => { try { p.kill(); } catch {} resolve({ ok: false, error: 'timeout' }); }, 20000);
     p.stdout.on('data', (d) => { out += d; });
@@ -621,6 +647,7 @@ app.on('child-process-gone', (e, d) => evlog(`child process gone: ${d.type} ${d.
 app.whenReady().then(() => {
   if (process.argv.includes('--install-shortcuts')) { ensureShortcuts(); }
   // Self-heal: keep the Start Menu entry present and named "RA Assistant".
+  else if (PACKAGED) healShortcuts();
   else if (!settings.get('firstRun')) { if (!fs.existsSync(shortcutPaths().start)) ensureShortcuts(); else cleanStrayShortcut(); }
   createIsland();
   createTray();
