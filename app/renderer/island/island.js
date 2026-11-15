@@ -42,11 +42,10 @@
     const prevTabs = JSON.stringify(RA.S.behaviour.tabs);
     const prevLang = RA.S.lang;
     RA.S = S;
+    // Tabs register their listeners once in render(); a full reload is the leak-free way to re-translate them.
+    if (prevLang !== S.lang) { location.reload(); return; }
     applyLook();
-    if (prevTabs !== JSON.stringify(S.behaviour.tabs) || prevLang !== S.lang) {
-      if (prevLang !== S.lang) for (const t of RA.tabs) { if (t.pane) { t.pane.innerHTML = ''; t.render(t.pane); } }
-      RA.buildTabs();
-    }
+    if (prevTabs !== JSON.stringify(S.behaviour.tabs)) RA.buildTabs();
     RA.emit('settings', { S, changed });
     RA.refresh();
   });

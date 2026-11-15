@@ -573,10 +573,43 @@ function quit() {
 }
 
 let agents = null;
+// QA: `electron.exe <app> --qa-stress` (second launch) floods the island with events and logs memory/listener counts.
+async function qaStress() {
+  const snap = (label) => {
+    const m = app.getAppMetrics();
+    const ws = m.reduce((a, x) => a + (x.memory ? x.memory.workingSetSize : 0), 0);
+    const rend = m.filter((x) => x.type === 'Tab').map((x) => Math.round(x.memory.workingSetSize / 1024)).join('/');
+    const bl = bus.eventNames().reduce((a, n) => a + bus.listenerCount(n), 0);
+    evlog(`qa ${label}: total WS ${Math.round(ws / 1024)} MB, renderers ${rend} MB, main heap ${Math.round(process.memoryUsage().heapUsed / 1048576)} MB, bus listeners ${bl}, ipc handlers ${Object.keys(handlers).length}`);
+  };
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  snap('before');
+  for (let round = 0; round < 3; round++) {
+    for (let i = 0; i < 150; i++) {
+      ctx.toast({ kind: 'notif', title: `QA ${round}-${i}`, body: 'x'.repeat(i % 200), ms: 50 });
+      ctx.state('volume', { v: (i % 100) / 100, muted: false, osd: true, at: Date.now() });
+      if (i % 10 === 0) ctx.state('agents', { list: [{ key: 'qa', source: 'copilot', sourceLabel: 'QA', title: 'QA ' + i, status: i % 20 ? 'busy' : 'waiting', question: 'Q?', choices: ['A', 'B'], startedAt: Date.now() }] });
+      await wait(10);
+    }
+    ctx.state('agents', { list: [] });
+    await wait(4000);
+    snap('round ' + round);
+  }
+  await wait(8000);
+  for (const w of BrowserWindow.getAllWindows()) try { w.webContents.executeJavaScript('window.gc && gc()'); } catch {}
+  snap('after');
+  // Language switch reloads the island renderer (leak-free re-translation); make sure it comes back.
+  const lang = settings.get('lang');
+  settings.set('lang', lang === 'en' ? 'id' : 'en'); await wait(3000);
+  settings.set('lang', lang); await wait(3000);
+  snap('after lang switch x2');
+}
+
 // Launching RA again while it runs brings the island back (and opens Settings, like before).
 app.on('second-instance', (e, argv) => {
   dlog('second-instance');
   if ((argv || []).some((a) => a.startsWith('--listen-test='))) return;
+  if ((argv || []).includes('--qa-stress')) { qaStress().catch((err) => errlog('qa', err)); return; }
   restoreIsland('second launch');
   try { openSettings(); } catch (err) { errlog('openSettings', err); }
 });
