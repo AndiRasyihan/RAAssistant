@@ -33,6 +33,9 @@ function findOtp(text) {
   if (/^(19|20)\d\d$/.test(m[2]) && !/\d{5,}/.test(m[2])) return null;
   return m[2];
 }
+exports.findOtp = findOtp;
+exports.parseToast = parseToast;
+exports.niceName = niceName;
 
 exports.init = (ctx) => {
   let DatabaseSync;

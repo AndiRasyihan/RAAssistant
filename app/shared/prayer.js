@@ -67,8 +67,9 @@
       };
     }
     const adj = tz - lng / 15;
-    // Tuned against published Kemenag schedules (e.g. Jakarta: Subuh 04.06, Terbit 05.25, Dhuha 05.49, Maghrib 17.52).
-    const ihtiyath = { subuh: 2, terbit: -1, dhuha: 1, dzuhur: 3, ashar: 2, maghrib: 3, isya: 2 };
+    // Tuned against published Kemenag schedules (Jakarta & Makassar, Jan/Apr/Jul/Nov 2026; see test/prayer.test.js).
+    // Maghrib errs late, never early (iftar).
+    const ihtiyath = { subuh: 2, terbit: -4, dhuha: 2, dzuhur: 3, ashar: 2, maghrib: 3, isya: 2 };
     const out = {};
     for (const k of Object.keys(h)) {
       let minutes = (h[k] + adj) * 60 + ihtiyath[k];

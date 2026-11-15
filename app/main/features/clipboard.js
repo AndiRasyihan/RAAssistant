@@ -12,12 +12,22 @@ const PASSWORD_APPS = ['1password.exe', 'bitwarden.exe', 'keepass.exe', 'keepass
 const EXCLUDE_FORMATS = ['ExcludeClipboardContentFromMonitorProcessing', 'Clipboard Viewer Ignore'];
 const MAX = 60;
 
+// Boot time in minutes since epoch, derived from uptime (jitters by a few seconds between calls).
+const bootMinutes = (now = Date.now(), uptimeS = os.uptime()) => Math.round((now - uptimeS * 1000) / 60000);
+// The cache belongs to an earlier boot (shutdown/restart happened) => it must be wiped. ±2 min of jitter is allowed.
+const bootStale = (saved, current) => !Number.isFinite(saved) || Math.abs(saved - current) > 2;
+const isOtpLike = (t) => /^\s*[A-Z]?-?\d{4,8}\s*$/.test(String(t));
+exports.bootMinutes = bootMinutes;
+exports.bootStale = bootStale;
+exports.isOtpLike = isOtpLike;
+exports.PASSWORD_APPS = PASSWORD_APPS;
+
 exports.init = (ctx) => {
   const S = () => ctx.settings();
   const dir = path.join(ctx.paths.cache, 'clipboard');
   const indexFile = path.join(dir, 'index.json');
   const bootFile = path.join(dir, 'boot.json');
-  const bootTime = () => Math.round((Date.now() - os.uptime() * 1000) / 60000); // minutes since epoch
+  const bootTime = () => bootMinutes();
   let items = [];
   let skip = new Set();
   let ownWrite = 0;
@@ -26,8 +36,7 @@ exports.init = (ctx) => {
   function load() {
     try {
       const b = JSON.parse(fs.readFileSync(bootFile, 'utf8'));
-      // Allow ±2 min of jitter in the uptime-derived boot time.
-      if (Math.abs(b.boot - bootTime()) > 2) { wipe(); return; }
+      if (bootStale(b.boot, bootTime())) { wipe(); return; }
       items = JSON.parse(fs.readFileSync(indexFile, 'utf8'));
     } catch { wipe(); }
   }
@@ -42,7 +51,7 @@ exports.init = (ctx) => {
     ctx.state('clipboard', S().phone.clipboard ? items.map((i) => ({ id: i.id, type: i.type, text: i.type === 'text' ? i.text.slice(0, 300) : '', img: i.type === 'image' ? pathToFileURL(i.file).href : '', at: i.at })) : []);
   }
 
-  const looksLikeOtp = (t) => /^\s*[A-Z]?-?\d{4,8}\s*$/.test(t) || skip.has(t.trim());
+  const looksLikeOtp = (t) => isOtpLike(t) || skip.has(t.trim());
 
   async function capture(m) {
     if (!S().phone.clipboard) return;

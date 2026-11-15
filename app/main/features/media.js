@@ -49,6 +49,10 @@ function queries(m) {
   return res;
 }
 
+exports.parseLrc = parseLrc;
+exports.clean = clean;
+exports.queries = queries;
+
 exports.init = (ctx) => {
   const cacheDir = path.join(ctx.paths.cache, 'lyrics');
   fs.mkdirSync(cacheDir, { recursive: true });

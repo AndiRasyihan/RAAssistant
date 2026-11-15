@@ -18,45 +18,74 @@ const NAMES = {
 };
 const nice = (exe) => NAMES[exe] || exe.replace(/\.exe$/i, '').replace(/^./, (c) => c.toUpperCase());
 const dayKey = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+// Pure aggregation: add the span [from, to) in `state` (and app `exe` when active) to `all`, split at local midnight.
+function credit(all, from, to, state, exe) {
+  while (from < to) {
+    const mid = new Date(from); mid.setHours(24, 0, 0, 0);
+    const end = Math.min(to, mid.getTime());
+    const k = dayKey(from);
+    const d = all[k] || (all[k] = { active: 0, idle: 0, locked: 0, sleep: 0, apps: {}, first: 0, last: 0 });
+    const dt = end - from;
+    d[state] = (d[state] || 0) + dt;
+    if (state === 'active' && exe) d.apps[exe] = (d.apps[exe] || 0) + dt;
+    // First/last use only count time the screen was actually in use.
+    if (state === 'active' || state === 'idle') { d.first = d.first ? Math.min(d.first, from) : from; d.last = Math.max(d.last || 0, end); }
+    from = end;
+  }
+  return all;
+}
+
+function summarize(all, k) {
+  const d = all[k];
+  if (!d) return null;
+  const merged = [];
+  for (const [e, ms] of Object.entries(d.apps || {})) {
+    const name = nice(e);
+    const m = merged.find((x) => x.name === name);
+    if (m) m.ms += ms; else merged.push({ exe: e, name, ms });
+  }
+  merged.sort((a, b) => b.ms - a.ms);
+  return { day: k, active: d.active, idle: d.idle, locked: d.locked, sleep: d.sleep, first: d.first || 0, last: d.last || 0, apps: merged.slice(0, 12) };
+}
+
+function prune(all, keep) {
+  const keys = Object.keys(all).sort();
+  while (keys.length > keep) delete all[keys.shift()];
+  return all;
+}
+
+exports.credit = credit;
+exports.summarize = summarize;
+exports.prune = prune;
+exports.dayKey = dayKey;
+exports.nice = nice;
 
 exports.init = (ctx) => {
   const on = () => ctx.settings().screen.track;
   const all = ctx.data.get('screentime') || {};
   let exe = String((ctx.fg && ctx.fg().exe) || '').toLowerCase(), state = 'active', last = Date.now(), dirty = false, saveT = null;
+  let locked = false; // the lock screen survives sleep, so "resume" alone doesn't mean the screen is in use
 
-  function bucket(t) {
-    const k = dayKey(t);
-    return all[k] || (all[k] = { active: 0, idle: 0, locked: 0, sleep: 0, apps: {}, first: t, last: t });
-  }
-  // Credit the time since the previous call to the current state (split at midnight).
+  // Credit the time since the previous call to the current state.
   function flush(now = Date.now()) {
-    let from = last; last = now;
+    const from = last; last = now;
     if (!on() || now <= from) return;
-    while (from < now) {
-      const mid = new Date(from); mid.setHours(24, 0, 0, 0);
-      const to = Math.min(now, mid.getTime());
-      const d = bucket(from), dt = to - from;
-      d[state] += dt;
-      if (state === 'active' && exe) d.apps[exe] = (d.apps[exe] || 0) + dt;
-      if (state === 'active' || state === 'idle') { d.first = Math.min(d.first, from); d.last = Math.max(d.last, to); }
-      from = to;
-    }
+    credit(all, from, now, state, exe);
     dirty = true;
   }
   function setState(s) { flush(); state = s; publish(); }
   function save() {
     if (!dirty) return;
     dirty = false;
-    const keys = Object.keys(all).sort();
-    while (keys.length > KEEP_DAYS) delete all[keys.shift()];
+    prune(all, KEEP_DAYS);
     ctx.data.set('screentime', all);
   }
 
   ctx.bus.on('fg', (m) => { flush(); if (state === 'idle') state = 'active'; exe = String(m.exe || '').toLowerCase(); });
-  powerMonitor.on('lock-screen', () => setState('locked'));
-  powerMonitor.on('unlock-screen', () => setState('active'));
+  powerMonitor.on('lock-screen', () => { locked = true; setState('locked'); });
+  powerMonitor.on('unlock-screen', () => { locked = false; setState('active'); });
   powerMonitor.on('suspend', () => { setState('sleep'); save(); });
-  powerMonitor.on('resume', () => setState('active'));
+  powerMonitor.on('resume', () => setState(locked ? 'locked' : 'active'));
   powerMonitor.on('shutdown', () => { flush(); save(); });
 
   setInterval(() => {
@@ -71,14 +100,7 @@ exports.init = (ctx) => {
     if (!saveT) saveT = setTimeout(() => { saveT = null; save(); }, 2 * 60 * 1000);
   }, TICK_MS);
 
-  function summary(k) {
-    const d = all[k];
-    if (!d) return null;
-    const apps = Object.entries(d.apps).map(([e, ms]) => ({ exe: e, name: nice(e), ms })).sort((a, b) => b.ms - a.ms);
-    const merged = [];
-    for (const a of apps) { const m = merged.find((x) => x.name === a.name); if (m) m.ms += a.ms; else merged.push({ ...a }); }
-    return { day: k, active: d.active, idle: d.idle, locked: d.locked, sleep: d.sleep, first: d.first, last: d.last, apps: merged.slice(0, 12) };
-  }
+  const summary = (k) => summarize(all, k);
   function publish() { ctx.state('screentime', { state, today: summary(dayKey(Date.now())) }); }
   ctx.handle('screentime.get', () => {
     flush();
