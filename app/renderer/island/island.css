@@ -263,3 +263,65 @@ body.theme-coverglow #island { animation-timing-function: steps(16) !important; 
 .rae .blf { animation-timing-function: steps(9) !important; }
 .rae .bob, .rae .note { animation-timing-function: steps(5) !important; }
 .rae .zz, .rae .sweat, .rae .tear { animation-timing-function: steps(14) !important; }
+
+/* ------------------------------------------------------------- device & connection notices */
+#toast.dvbox { display: block; padding: 0; }
+.dv { --dvbg: var(--bg); height: 100%; display: flex; align-items: center; gap: 12px; padding: 8px 16px 8px 12px; }
+.dvart { position: relative; width: 46px; height: 46px; flex: 0 0 auto; display: grid; place-items: center; color: var(--accent); }
+.dvart .ring { position: absolute; inset: 2px; border-radius: 50%; border: 1.5px solid var(--accent); opacity: 0; }
+.dvsvg { width: 38px; height: 38px; position: relative; }
+.dvbadge { position: absolute; right: -3px; bottom: -2px; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); color: var(--bg); display: grid; place-items: center; box-shadow: 0 0 0 2px var(--bg); }
+.dvbadge .dvsvg { width: 13px; height: 13px; stroke-width: 4; }
+.dvtxt { flex: 1; min-width: 0; }
+.dvtitle { font-weight: 650; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; animation: dvtx .45s var(--ease) both .08s; }
+.dvsub { color: var(--muted); font-size: 11.5px; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; animation: dvtx .45s var(--ease) both .16s; }
+.dvchip { display: flex; align-items: center; gap: 6px; font-weight: 650; font-size: 13px; font-variant-numeric: tabular-nums; padding: 4px 10px 4px 8px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 16%, transparent); animation: dvtx .45s var(--ease) both .22s; }
+.dvchip.low { background: rgba(255, 92, 92, .18); color: #ff9d9d; }
+.dvbat { position: relative; width: 22px; height: 11px; border: 1.6px solid currentColor; border-radius: 3.5px; opacity: .9; }
+.dvbat::after { content: ''; position: absolute; right: -4px; top: 2.5px; width: 2px; height: 4px; border-radius: 0 1px 1px 0; background: currentColor; }
+.dvbat b { position: absolute; left: 1.5px; top: 1.5px; bottom: 1.5px; width: calc((100% - 3px) * var(--p) / 100%); max-width: calc(100% - 3px); border-radius: 1.5px; background: currentColor; transform-origin: left; animation: dvbar .9s var(--ease) both .25s; }
+.dvchip:not(.low) .dvbat b { background: var(--accent); }
+.dvbars { display: flex; align-items: flex-end; gap: 2px; height: 12px; }
+.dvbars i { width: 3px; height: calc(var(--i) * 3px); border-radius: 1px; background: currentColor; opacity: .25; }
+.dvbars i.on { opacity: 1; background: var(--accent); animation: dvpop .3s var(--ease) both calc(.25s + var(--i) * .1s); }
+
+/* entry animations per type */
+.dv.a-plug .dvsvg:not(.dvbadge *) { animation: dvplug .7s var(--ease) both; }
+.dv.a-plug .dvbadge { animation: dvpop .35s var(--ease) both .55s; }
+.dv.a-pair .dvart .ring, .dv.a-plug .dvart .ring, .dv.a-glow .dvart .ring { animation: dvring 1.1s ease-out 2 .1s; }
+.dv.a-pair .dvsvg:not(.dvbadge *) { animation: dvdrop .6s var(--ease) both; }
+.dv.a-pair .dvbadge { animation: dvpop .35s var(--ease) both .45s; }
+.dv.k-tws.a-pair .budL { animation: dvbudL .7s var(--ease) both .15s; }
+.dv.k-tws.a-pair .budR { animation: dvbudR .7s var(--ease) both .15s; }
+.dv.k-tws.a-pair .case { animation: dvfade .5s ease both; }
+.dv.k-speaker .wv { animation: dvwave .9s ease-in-out 3 .3s; }
+.dv.a-wave .wf .a0 { animation: dvpop .3s var(--ease) both .05s; }
+.dv.a-wave .wf .a1 { animation: dvarc .35s ease both .25s; }
+.dv.a-wave .wf .a2 { animation: dvarc .35s ease both .45s; }
+.dv.a-wave .wf .a3 { animation: dvarc .35s ease both .65s; }
+.dv.a-glow .glow { animation: dvscreen 1.2s ease both .2s; }
+.dv.a-glow .dvsvg { animation: dvdrop .6s var(--ease) both; }
+.dv.a-charge .dvfill { transform-box: fill-box; transform-origin: left; animation: dvfill 1.1s var(--ease) both .1s; }
+.dv.a-charge .dvbolt { animation: dvbolt .5s var(--ease) both .9s, dvpulse 1s ease-in-out 2 1.4s; transform-box: fill-box; transform-origin: center; }
+.dv.a-charge .dvart .ring { animation: dvring 1.2s ease-out 2 1s; }
+.dv.a-out .dvart { color: var(--muted); animation: dvout .9s var(--ease) both .15s; }
+.dv.a-out .dvbadge { background: var(--muted); }
+.dv.a-out.wifi .dvart::after, .dv.a-out.bt .dvart::after, .dv.a-out.chg .dvart::after { content: ''; position: absolute; left: 6px; right: 6px; top: 50%; height: 2.4px; border-radius: 2px; background: currentColor; transform: rotate(-38deg) scaleX(0); animation: dvslash .35s ease both .35s; }
+
+@keyframes dvtx { from { opacity: 0; transform: translateX(-6px); } }
+@keyframes dvpop { from { opacity: 0; transform: scale(.3); } 70% { transform: scale(1.12); } }
+@keyframes dvbar { from { transform: scaleX(0); } }
+@keyframes dvplug { from { opacity: 0; transform: translateX(26px) rotate(8deg); } 70% { opacity: 1; transform: translateX(-2px); } }
+@keyframes dvdrop { from { opacity: 0; transform: translateY(-14px) scale(.85); } 70% { opacity: 1; transform: translateY(1px); } }
+@keyframes dvring { from { opacity: .7; transform: scale(.75); } to { opacity: 0; transform: scale(1.35); } }
+@keyframes dvbudL { from { transform: translate(5px, 9px) rotate(-20deg); opacity: 0; } }
+@keyframes dvbudR { from { transform: translate(-5px, 9px) rotate(20deg); opacity: 0; } }
+@keyframes dvfade { from { opacity: 0; } }
+@keyframes dvwave { 50% { opacity: .15; } }
+@keyframes dvarc { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dvscreen { 0% { opacity: 0; } 40% { opacity: .55; } 100% { opacity: .18; } }
+@keyframes dvfill { from { transform: scaleX(0); } }
+@keyframes dvbolt { from { opacity: 0; transform: scale(.2); } 70% { transform: scale(1.25); } }
+@keyframes dvpulse { 50% { transform: scale(1.18); } }
+@keyframes dvout { 0% { transform: none; opacity: 1; } 100% { transform: scale(.88); opacity: .6; } }
+@keyframes dvslash { to { transform: rotate(-38deg) scaleX(1); } }

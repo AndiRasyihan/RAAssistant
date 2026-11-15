@@ -73,6 +73,7 @@ const ctx = {
     for (const w of [island, settingsWin, lyricsWin, pillWin]) if (w && !w.isDestroyed()) w.webContents.send('ra:state', key, value);
   },
   getState: (k) => stateCache[k],
+  dlog: (...a) => dlog(...a),
   handle(name, fn) { handlers[name] = fn; },
   island: () => island,
   toast(item) { ctx.state('toast', { id: Date.now() + Math.random(), at: Date.now(), ...item }); },
@@ -570,6 +571,8 @@ function startSystemHelper() {
   sys.on('mics', (m) => bus.emit('mics', m));
   sys.on('netcat', (m) => bus.emit('netcat', m));
   sys.on('bt', (m) => bus.emit('bt', m));
+  sys.on('pnp', (m) => bus.emit('pnp', m));
+  sys.on('wifi', (m) => bus.emit('wifi', m));
   sys.on('clip', (m) => bus.emit('clip', m));
   sys.on('focusAck', (m) => dlog('focusAck', m));
   sys.on('stderr', (s) => { dlog('[sys]', s); });
@@ -654,6 +657,32 @@ app.on('second-instance', (e, argv) => {
   dlog('second-instance');
   if ((argv || []).some((a) => a.startsWith('--listen-test='))) return;
   if ((argv || []).includes('--qa-stress')) { qaStress().catch((err) => errlog('qa', err)); return; }
+  const qs = (argv || []).find((a) => a.startsWith('--qa-settings='));
+  if (qs) {
+    const [sec, pos] = qs.split('=')[1].split(':');
+    openSettings(sec);
+    setTimeout(async () => {
+      try {
+        if (pos === 'end') await settingsWin.webContents.executeJavaScript('for (const e of document.querySelectorAll("*")) if (e.scrollHeight > e.clientHeight + 20) e.scrollTop = e.scrollHeight; 1');
+        await new Promise((r) => setTimeout(r, 300));
+        const img = await settingsWin.webContents.capturePage(); fs.writeFileSync(path.join(require('os').tmpdir(), 'ra_settings.png'), img.toPNG());
+      } catch (err) { errlog('qa-settings', err); }
+    }, 2500);
+    return;
+  }
+  if ((argv || []).includes('--qa-devices')) {
+    bus.emit('devices:demo');
+    // Frames of every animation via capturePage (works even while the screen is locked).
+    const dir = path.join(require('os').tmpdir(), 'ra_dv');
+    try { fs.mkdirSync(dir, { recursive: true }); } catch {}
+    for (let i = 0; i < 11; i++) {
+      setTimeout(async () => {
+        if (!islandAlive()) return;
+        try { const img = await island.webContents.capturePage(); fs.writeFileSync(path.join(dir, `f${i}.png`), img.toPNG()); } catch (err) { errlog('qa-devices', err); }
+      }, 1300 + i * 2650);
+    }
+    return;
+  }
   restoreIsland('second launch');
   try { openSettings(); } catch (err) { errlog('openSettings', err); }
 });

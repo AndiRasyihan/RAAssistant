@@ -326,8 +326,15 @@
         item(L('Abaikan aplikasi ini', 'Ignore these apps'), '', null),
         item('', '', strList('meetings.ignoreApps', 'contoh: discord.exe', exeNorm), { col: true })
       ),
+      group(L('Perangkat & koneksi', 'Devices & connections'),
+        item(L('Charger dicolok / dicabut', 'Charger plugged / unplugged'), L('Animasi baterai terisi dengan persentase.', 'Battery-filling animation with percentage.'), toggle('devices.charger')),
+        item(L('Wi‑Fi tersambung / terputus', 'Wi‑Fi connected / disconnected'), L('Dengan nama jaringan dan kekuatan sinyal. Juga kabel LAN.', 'With network name and signal strength. Also LAN cable.'), toggle('devices.wifi')),
+        item(L('Bluetooth tersambung / terputus', 'Bluetooth connected / disconnected'), L('Gambar sesuai jenis (headphone, TWS, speaker, mouse, keyboard, ponsel, stik game) + baterai bila tersedia.', 'Art per device type (headphones, earbuds, speaker, mouse, keyboard, phone, gamepad) + battery when available.'), toggle('devices.bluetooth')),
+        item(L('Perangkat USB dicolok / dicabut', 'USB devices plugged / unplugged'), L('Mouse, keyboard, flashdisk/HDD, ponsel (USB), kamera, audio, tethering. Termasuk lewat port Type‑C.', 'Mouse, keyboard, flash/HDD, phone (USB), camera, audio, tethering. Including via Type‑C ports.'), toggle('devices.usb')),
+        item(L('Monitor eksternal', 'External display'), L('HDMI, DisplayPort / USB‑C, Miracast.', 'HDMI, DisplayPort / USB‑C, Miracast.'), toggle('devices.display')),
+        item(L('Coba animasi', 'Preview animations'), '', button(L('Putar demo', 'Play demo'), () => RA.invoke('devices.demo')))
+      ),
       group(L('Kabar di island', 'Island notices'),
-        item(L('Earbuds Bluetooth tersambung (dengan baterai)', 'Bluetooth earbuds connected (with battery)'), '', toggle('meetings.bluetooth')),
         item(L('Unduhan di island', 'Downloads in the island'), L('Nama, ukuran, kecepatan dari Chrome/Edge/Firefox. Klik untuk membuka folder.', 'Name, size, speed from Chrome/Edge/Firefox. Click to open the folder.'), toggle('meetings.downloads')),
         item(L('Internet terputus / tersambung', 'Internet lost / restored'), L('Dengan lama putusnya.', 'With outage duration.'), toggle('meetings.internet')),
         item(L('Tawarkan lanjutkan musik setelah kunci/tidur ≥5 menit', 'Offer to resume music after lock/sleep ≥5 min'), '', toggle('meetings.resumeAfterLock'))

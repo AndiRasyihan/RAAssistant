@@ -312,34 +312,80 @@ function Media-Cmd($a, $v) {
 
 # PnP queries are slow (seconds), so they run on a background runspace and are collected later.
 $script:bgJobs = @()
+# A small reused pool: modules (PnpDevice, CIM) stay loaded between scans instead of re-importing each time.
+$script:pool = [runspacefactory]::CreateRunspacePool(1, 2); $script:pool.Open()
+$script:rerun = @{}
 function Start-Bg($kind, [string]$script, $arg) {
+  # One scan of a kind at a time; a request meanwhile re-runs it once the current scan is done.
+  if (@($script:bgJobs | Where-Object { $_.kind -eq $kind }).Count) { $script:rerun[$kind] = @($script, $arg); return }
   $ps = [PowerShell]::Create().AddScript($script)
+  $ps.RunspacePool = $script:pool
   if ($arg -ne $null) { $ps = $ps.AddArgument($arg) }
   $script:bgJobs += @{ kind = $kind; ps = $ps; h = $ps.BeginInvoke() }
 }
 function Collect-Bg {
   if ($script:bgJobs.Count -eq 0) { return }
-  $keep = @()
+  $keep = @(); $done = @()
   foreach ($j in $script:bgJobs) {
     if ($j.h.IsCompleted) {
       $r = $null; try { $r = $j.ps.EndInvoke($j.h) } catch {}
       $j.ps.Dispose()
       Send @{ t = $j.kind; data = @($r | ForEach-Object { $_ }) }
+      $done += $j.kind
     } else { $keep += $j }
   }
   $script:bgJobs = $keep
+  foreach ($k in $done) { if ($script:rerun.ContainsKey($k)) { $a = $script:rerun[$k]; $script:rerun.Remove($k); Start-Bg $k $a[0] $a[1] } }
 }
+# Paired Bluetooth devices: one entry per device node with connection state, class-of-device, container
+# category and battery (Windows reports battery on a sibling service node of the same container).
 $btScript = @'
 $ErrorActionPreference = 'SilentlyContinue'
-Get-PnpDevice -Class Bluetooth -PresentOnly | Where-Object { $_.Status -eq 'OK' } | ForEach-Object {
-  $bat = (Get-PnpDeviceProperty -InstanceId $_.InstanceId -KeyName '{104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2').Data
-  if ($bat -ne $null) {
-    $conn = (Get-PnpDeviceProperty -InstanceId $_.InstanceId -KeyName '{83DA6326-97A6-4088-9453-A1923F573B29} 15').Data
-    @{ name = $_.FriendlyName; battery = [int]$bat; connected = [bool]$conn }
-  }
+$all = @(Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -match '^(BTHENUM|BTHLE|BTHLEDEVICE)\\' })
+$devs = @($all | Where-Object { $_.InstanceId -match '^(BTHENUM|BTHLE)\\DEV_' })
+if ($devs.Count -eq 0) { return }
+$bat = @{}
+$bp = $all | Get-PnpDeviceProperty -KeyName '{104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2','DEVPKEY_Device_ContainerId'
+$cont = @{}
+foreach ($p in $bp) { if ($p.KeyName -eq 'DEVPKEY_Device_ContainerId') { $cont[$p.InstanceId] = "$($p.Data)" } }
+foreach ($p in $bp) { if ($p.KeyName -like '{104EA319*' -and $p.Data -ne $null) { $c = $cont[$p.InstanceId]; if ($c) { $bat[$c] = [int]$p.Data } } }
+$keys = '{83DA6326-97A6-4088-9453-A1923F573B29} 15','DEVPKEY_Bluetooth_ClassOfDevice','DEVPKEY_DeviceContainer_Category'
+$dp = $devs | Get-PnpDeviceProperty -KeyName $keys
+foreach ($d in $devs) {
+  $mine = @($dp | Where-Object { $_.InstanceId -eq $d.InstanceId })
+  $conn = ($mine | Where-Object { $_.KeyName -like '{83DA6326*' }).Data
+  $cod = ($mine | Where-Object { $_.KeyName -eq 'DEVPKEY_Bluetooth_ClassOfDevice' }).Data
+  $cat = ($mine | Where-Object { $_.KeyName -eq 'DEVPKEY_DeviceContainer_Category' }).Data
+  $c = $cont[$d.InstanceId]
+  $b = $null; if ($c -and $bat.ContainsKey($c)) { $b = $bat[$c] }
+  @{ id = ($d.InstanceId -replace '^.*DEV_([0-9A-Fa-f]{12}).*$', '$1'); name = $d.FriendlyName; connected = [bool]$conn; cod = [int64]$cod; cat = "$($cat -join ',')"; battery = $b; le = ($d.InstanceId -like 'BTHLE*') }
 }
 '@
 function Get-Bluetooth { Start-Bg 'bt' $btScript }
+
+# Plug-and-play snapshot used to diff arrivals/removals (USB, phones, drives, monitors).
+$pnpScript = @'
+$ErrorActionPreference = 'SilentlyContinue'
+$want = 'Mouse','Keyboard','DiskDrive','WPD','Camera','Image','Net','MEDIA','Printer','Ports','SmartCardReader','Biometric','USB'
+Get-CimInstance Win32_PnPEntity -Property DeviceID,Name,PNPClass,Status | Where-Object { $want -contains $_.PNPClass -and $_.DeviceID -match '^(USB|HID|USBSTOR|SWD\\WPDBUSENUM|SCSI|STORAGE)' } | ForEach-Object {
+  @{ k = 'pnp'; id = $_.DeviceID; name = $_.Name; cls = $_.PNPClass }
+}
+Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=2' | ForEach-Object { @{ k = 'vol'; id = $_.DeviceID; name = $_.VolumeName } }
+$tech = @{}
+Get-CimInstance -Namespace root/wmi WmiMonitorConnectionParams | ForEach-Object { $tech[$_.InstanceName] = [int64]$_.VideoOutputTechnology }
+Get-CimInstance -Namespace root/wmi WmiMonitorID | ForEach-Object {
+  $n = (($_.UserFriendlyName | Where-Object { $_ }) | ForEach-Object { [char]$_ }) -join ''
+  @{ k = 'mon'; id = $_.InstanceName; name = $n; tech = $tech[$_.InstanceName] }
+}
+'@
+# Wi-Fi/LAN state; netsh is fast (~0.1 s). Parsed in JS so localized output can be handled there.
+$wifiScript = @'
+$ErrorActionPreference = 'SilentlyContinue'
+$raw = (netsh wlan show interfaces) -join "`n"
+$prof = (Get-NetConnectionProfile | Where-Object { $_.InterfaceAlias -match 'Wi-?Fi|WLAN|Wireless' } | Select-Object -First 1).Name
+$lan = [bool](Get-NetAdapter -Physical | Where-Object { $_.Status -eq 'Up' -and $_.PhysicalMediaType -match '802\.3' })
+@{ raw = $raw; profile = "$prof"; lan = $lan }
+'@
 
 
 
@@ -357,6 +403,8 @@ function Handle($line) {
       Send @{ t = 'netcat'; name = "$($p.Name)"; category = "$($p.NetworkCategory)" }
     }
     'bt' { Get-Bluetooth }
+    'pnp' { Start-Bg 'pnp' $pnpScript }
+    'wifi' { Start-Bg 'wifi' $wifiScript }
     'focus' { Send @{ t = 'focus'; rid = $m.rid; ok = [RAH.Win]::Focus([string]$m.exe, [string]$m.title) } }
     'focusHwnd' { $ok = [RAH.Win]::FocusHwnd([long]$m.h); Send @{ t = 'focusAck'; ok = $ok; h = $m.h } }
     'exit' { exit 0 }
@@ -365,6 +413,10 @@ function Handle($line) {
 
 # Brightness changes are event-driven (no polling).
 try { Register-CimIndicationEvent -Namespace root/wmi -ClassName WmiMonitorBrightnessEvent -SourceIdentifier bri | Out-Null } catch {}
+# Device plug/unplug and network changes are event-driven too; both are debounced before scanning.
+try { Register-CimIndicationEvent -ClassName Win32_DeviceChangeEvent -SourceIdentifier devchg | Out-Null } catch {}
+try { Register-ObjectEvent -InputObject ([System.Net.NetworkInformation.NetworkChange]) -EventName NetworkAddressChanged -SourceIdentifier netchg | Out-Null } catch {}
+$devDue = -1; $netDue = -1
 
 $stdin = New-Object System.IO.StreamReader([Console]::OpenStandardInput(), (New-Object System.Text.UTF8Encoding($false)))
 $read = $stdin.ReadLineAsync()
@@ -404,6 +456,13 @@ while ($true) {
     Send @{ t = 'bri'; v = [int]$e.SourceEventArgs.NewEvent.Brightness }
     Remove-Event -EventIdentifier $e.EventIdentifier
   }
+  $ev = @(Get-Event -SourceIdentifier devchg -ErrorAction SilentlyContinue)
+  if ($ev.Count) { $ev | ForEach-Object { Remove-Event -EventIdentifier $_.EventIdentifier }; $devDue = $tick + 6 }
+  if ($devDue -ge 0 -and $tick -ge $devDue) { $devDue = -1; Send @{ t = 'devchg' }; Start-Bg 'pnp' $pnpScript; Get-Bluetooth }
+  $ev = @(Get-Event -SourceIdentifier netchg -ErrorAction SilentlyContinue)
+  if ($ev.Count) { $ev | ForEach-Object { Remove-Event -EventIdentifier $_.EventIdentifier }; $netDue = $tick + 8 }
+  if ($netDue -ge 0 -and $tick -ge $netDue) { $netDue = -1; Start-Bg 'wifi' $wifiScript }
+  if ($script:bgJobs.Count -and $tick % 5 -ne 2) { Collect-Bg }
   $tick++
   Start-Sleep -Milliseconds 200
 }

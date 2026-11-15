@@ -50,7 +50,6 @@ module.exports = {
     auto: true,
     micButton: true,
     ignoreApps: ['discord.exe', 'whatsapp.exe', 'whatsapp.root.exe'],
-    bluetooth: true,
     downloads: true,
     internet: true,
     resumeAfterLock: true,
@@ -82,6 +81,8 @@ module.exports = {
   },
   focus: { minutes: 25, breakMin: 5 },
   screen: { track: true },          // screen-time tracking (local only)
+  // Animated notices for connections & plugged devices.
+  devices: { charger: true, wifi: true, bluetooth: true, usb: true, display: true },
   listen: { lang: 'id', model: 'base', source: 'mic' }, // live speech-to-text (offline Whisper); source: mic | system
   capture: {
     shortcut: 'CommandOrControl+Shift+S',

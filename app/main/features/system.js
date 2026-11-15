@@ -18,8 +18,15 @@ exports.init = (ctx) => {
     if (ok === online) return;
     online = ok;
     if (!S().meetings.internet) return;
-    if (!ok) { lostAt = Date.now(); ctx.toast({ title: t('net.lost'), body: '', icon: 'net', urgent: true }); }
-    else ctx.toast({ title: t('net.back'), body: lostAt ? `${t('net.after')} ${Math.max(1, Math.round((Date.now() - lostAt) / 1000))} ${t('common.sec')}` : '', icon: 'net' });
+    // A Wi-Fi connect/disconnect animation usually explains this; wait for it, then don't stack a second notice.
+    const lostFor = lostAt ? Math.max(1, Math.round((Date.now() - lostAt) / 1000)) : 0;
+    if (!ok) lostAt = Date.now();
+    setTimeout(() => {
+      const nc = ctx.getState('netchange');
+      if ((nc && Date.now() - nc.at < 15000) || online !== ok) return;
+      if (!ok) ctx.toast({ title: t('net.lost'), body: '', icon: 'net', urgent: true });
+      else ctx.toast({ title: t('net.back'), body: lostFor ? `${t('net.after')} ${lostFor} ${t('common.sec')}` : '', icon: 'net' });
+    }, 4500);
     ctx.state('online', ok);
   }
   // Cheap: OS connectivity flag every 4 s; a tiny HTTP probe only every 30 s or when the flag changes.
@@ -63,20 +70,7 @@ exports.init = (ctx) => {
   try { fs.watch(dlDir, () => { if (!dlTimer) scanDownloads(); }); } catch {}
   ctx.handle('showItem', (p) => require('electron').shell.showItemInFolder(p));
 
-  // ---- Bluetooth earbuds (battery via PnP; polled slowly, only when enabled)
-  let btPrev = null;
-  ctx.bus.on('bt', (m) => {
-    const list = (m.data || []).filter((d) => d && d.name);
-    const connected = list.filter((d) => d.connected);
-    if (btPrev) {
-      for (const d of connected) if (!btPrev.find((p) => p.name === d.name && p.connected)) {
-        ctx.toast({ title: `${d.name} ${t('bt.connected')}`, body: d.battery != null ? `🔋 ${d.battery}%` : '', icon: 'bt' });
-      }
-    }
-    btPrev = list;
-    ctx.state('bluetooth', connected);
-  });
-  setTimeout(function btLoop() { if (S().meetings.bluetooth && ctx.sys) ctx.sys.send({ c: 'bt' }); setTimeout(btLoop, 45000); }, 8000);
+  // ---- Bluetooth: see devices.js (connect/disconnect with device type + battery).
 
   // ---- resume music after lock / sleep ≥ 5 min
   let lockedAt = 0, wasPlaying = false;

@@ -60,6 +60,12 @@
   RA.on('toast', (item) => {
     if (!item || (!item.title && item.kind !== 'agentq')) return;
     if (item.kind === 'agentq') { RA.questionToast(item); RA.mascot.flash('surprised', 1400); return; }
+    if (item.kind === 'device') {
+      const v = RA.deviceView(item.dev || {});
+      if (item.dev && item.dev.on !== false) RA.mascot.flash(item.dev.type === 'charger' ? 'love' : 'wink', 1400);
+      RA.toast({ ...item, html: v.html, cls: 'dvbox', w: v.w, h: v.h, transient: true, expires: Date.now() + (item.force ? 90000 : 12000), after: RA.deviceAfter, ms: item.ms || 4500 });
+      return;
+    }
     RA.mascot.flash(item.kind === 'agent' ? 'love' : item.kind === 'drink' ? 'wink' : 'surprised', 1600);
     const it = { ...item };
     if (it.kind === 'notif') {

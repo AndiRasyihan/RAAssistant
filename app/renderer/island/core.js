@@ -317,6 +317,8 @@
   RA.held = [];
   RA.holding = () => RA.focusActive || RA.meetingActive;
   RA.toast = (item) => {
+    // Short-lived notices (device plugged, Wi‑Fi…) are dropped rather than held for later.
+    if (RA.holding() && item.transient && !item.force) return;
     if (RA.holding() && !item.urgent && !item.otp && !item.force) { RA.held.push(item); RA.refresh(); return; }
     if (item.interactive) {
       // Questions jump the queue and replace a plain toast that is currently showing.
@@ -335,11 +337,14 @@
   // Toasts wait while the panel is open (they would cover it) and play once it collapses.
   RA.flushToasts = () => { if (!toastShowing && !RA.expanded && queue.length) nextToast(); };
   function nextToast() {
-    const item = queue.shift();
+    let item = queue.shift();
+    // Stale short-lived notices (queued while the panel was open) are skipped.
+    while (item && item.expires && Date.now() > item.expires) item = queue.shift();
     toastShowing = item || null;
     const box = RA.$('#toast');
     if (!item) { document.body.classList.remove('toasting'); sizeIsland(); return; }
-    box.classList.toggle('q', !!item.html);
+    box.classList.toggle('q', !!item.html && !item.cls);
+    box.classList.toggle('dvbox', item.cls === 'dvbox');
     if (item.html) {
       box.innerHTML = item.html;
     } else {
@@ -358,6 +363,7 @@
     };
     document.body.classList.add('toasting');
     sizeIsland();
+    if (item.after) try { item.after(box); } catch {}
     const ms = item.ms || (item.urgent ? 9000 : 5000);
     let t = setTimeout(done, ms);
     function done() { clearTimeout(t); if (toastShowing !== item) return; if (item.interactive) window.ra.focus(false); nextToast(); }
