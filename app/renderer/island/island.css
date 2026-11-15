@@ -251,3 +251,15 @@ body.notch #micBtn { top: 2px; }
 #micBtn svg { width: 18px; height: 18px; fill: var(--fg); }
 #micBtn.muted { background: #ef4444; }
 body.meeting #micBtn { display: grid; }
+
+/* ---- low-cost ambient loops ----
+   The island renders without a GPU (software compositing), so every animation frame is a full repaint. Endless
+   ambient loops therefore step at ~6–12 fps instead of 60; one-shot UI transitions stay smooth. */
+body.theme-coverglow #island { animation-timing-function: steps(16) !important; }
+.spin, .rae .spn, .rae .stars path { animation-timing-function: steps(10) !important; }
+.bars i { animation-timing-function: steps(6) !important; }
+.dot.wait, .dot.rec, .rae .dots circle, .rae .qm, .rae .pulse, .rae .blx { animation-timing-function: steps(6) !important; }
+.rae .bl { animation-timing-function: steps(50) !important; }
+.rae .blf { animation-timing-function: steps(9) !important; }
+.rae .bob, .rae .note { animation-timing-function: steps(5) !important; }
+.rae .zz, .rae .sweat, .rae .tear { animation-timing-function: steps(14) !important; }
