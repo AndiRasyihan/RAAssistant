@@ -379,7 +379,12 @@ class Agents {
     if (this.emitTimer) return;
     this.emitTimer = setTimeout(() => {
       this.emitTimer = null;
-      this.ctx.state('agents', { list: this.list(), ext: this.extensionStatus() });
+      const v = { list: this.list(), ext: this.extensionStatus() };
+      // Agents write their logs constantly; only wake the UI when something it shows actually changed.
+      const key = JSON.stringify(v, (k, x) => (k === 'updatedAt' ? undefined : x));
+      if (key === this.lastEmit) return;
+      this.lastEmit = key;
+      this.ctx.state('agents', v);
     }, 150);
   }
 }
