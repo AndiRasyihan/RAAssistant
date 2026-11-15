@@ -102,7 +102,7 @@ function scale() {
 
 const BASE_W = 760, BASE_H = 560;
 function placeIsland() {
-  if (!island) return;
+  if (!islandAlive()) return;
   const d = targetDisplay();
   const k = scale();
   const w = Math.round(BASE_W * k), h = Math.round(BASE_H * k);
@@ -118,6 +118,38 @@ function webPrefs(extra = {}) {
   };
 }
 
+// Lifecycle events (close attempts, crashes, recreation) go to %APPDATA%\RAAssistant\events.log.
+function evlog(msg) {
+  try {
+    const f = path.join(app.getPath('userData'), 'events.log');
+    if (fs.existsSync(f) && fs.statSync(f).size > 256 * 1024) fs.renameSync(f, f + '.old');
+    fs.appendFileSync(f, `${new Date().toISOString()} ${msg}\n`);
+  } catch {}
+  dlog('EV', msg);
+}
+ctx.evlog = evlog;
+
+let quitting = false;
+const islandAlive = () => !!island && !island.isDestroyed();
+let recreateT = null, recreateCount = 0, recreateWindowStart = 0;
+// Bring the island back after it was destroyed or its renderer died. Backs off if it keeps failing.
+function recreateIsland(reason) {
+  if (quitting || recreateT) return;
+  const now = Date.now();
+  if (now - recreateWindowStart > 60000) { recreateWindowStart = now; recreateCount = 0; }
+  recreateCount++;
+  const delay = recreateCount <= 3 ? 500 : 15000;
+  evlog(`island recreate (${reason}) #${recreateCount} in ${delay}ms`);
+  recreateT = setTimeout(() => {
+    recreateT = null;
+    if (quitting) return;
+    const old = island;
+    island = null; softHidden = false; pointerInside = false; hitRects = [];
+    try { if (old && !old.isDestroyed()) old.destroy(); } catch {}
+    try { createIsland(); } catch (e) { errlog('createIsland', e); recreateIsland('create failed'); }
+  }, delay);
+}
+
 function createIsland() {
   island = new BrowserWindow({
     width: BASE_W, height: BASE_H, frame: false, transparent: true, resizable: false, movable: false,
@@ -130,14 +162,43 @@ function createIsland() {
   island.setIgnoreMouseEvents(true, { forward: true });
   island.setContentProtection(!!settings.get('capture.hideFromCapture'));
   island.loadFile(path.join(ROOT, 'renderer', 'island', 'island.html'));
-  island.once('ready-to-show', () => { placeIsland(); island.showInactive(); applyVisibility(true); });
-  island.on('blur', () => {
+  const win = island;
+  win.once('ready-to-show', () => { if (win !== island) return; placeIsland(); island.showInactive(); applyVisibility(true); evlog('island shown'); });
+  win.on('blur', () => {
+    if (win !== island) return;
     if (Date.now() - focusRequestedAt < 1000) return; // spurious blur while we are taking focus
     island.webContents.send('ra:blur');
     if (island.isFocusable()) { island.setFocusable(false); applyIgnore(); }
   });
-  // Re-assert topmost occasionally; some fullscreen apps steal it.
-  setInterval(() => { if (island && !softHidden) island.setAlwaysOnTop(true, 'screen-saver'); }, 15000);
+  // The island is not a normal window: Alt+F4, "End task" or WM_CLOSE must never remove it.
+  // Only the tray's "Quit" ends RA Assistant.
+  win.on('close', (e) => { if (!quitting) { e.preventDefault(); evlog('island close blocked'); } });
+  win.on('closed', () => { if (win === island) { island = null; if (!quitting) recreateIsland('closed'); } });
+  win.webContents.on('render-process-gone', (e, d) => { evlog(`island renderer gone: ${d.reason} (${d.exitCode})`); if (win === island) recreateIsland('renderer ' + d.reason); });
+  win.on('unresponsive', () => {
+    evlog('island unresponsive');
+    setTimeout(() => { if (win === island && !quitting) { evlog('island still unresponsive -> reload'); recreateIsland('unresponsive'); } }, 8000);
+  });
+  win.on('responsive', () => evlog('island responsive again'));
+  win.webContents.on('did-fail-load', (e, code, desc) => { evlog(`island load failed ${code} ${desc}`); if (win === island) recreateIsland('load failed'); });
+}
+// Re-assert topmost occasionally; some fullscreen apps steal it. Also a watchdog: the island must exist.
+setInterval(() => {
+  if (quitting) return;
+  if (!islandAlive()) { if (app.isReady()) recreateIsland('watchdog'); return; }
+  if (!softHidden) island.setAlwaysOnTop(true, 'screen-saver');
+}, 15000);
+
+// Make the island visible again (second launch, tray, after Explorer restarts…).
+function restoreIsland(reason) {
+  evlog('restore island: ' + reason);
+  if (!islandAlive()) { recreateIsland(reason); return; }
+  view.forcedHidden = false; view.trayShown = true;
+  island.setAlwaysOnTop(true, 'screen-saver');
+  if (!island.isVisible()) island.showInactive();
+  placeIsland();
+  applyVisibility(true);
+  rebuildTrayMenu();
 }
 
 function openSettings(section) {
@@ -228,7 +289,7 @@ function isBrowserFg() {
 }
 
 function applyVisibility(force) {
-  if (!island) return;
+  if (!islandAlive()) return;
   const mode = computeMode();
   const notch = isBrowserFg();
   if (mode === view.mode && notch === view.notch && !force) return;
@@ -243,7 +304,7 @@ function applyVisibility(force) {
 // making it fully transparent and click-through instead.
 let softHidden = false;
 function softHide(on) {
-  if (!island || on === softHidden) return;
+  if (!islandAlive() || on === softHidden) return;
   softHidden = on;
   island.setOpacity(on ? 0 : 1);
   if (on) { pointerInside = false; island.setIgnoreMouseEvents(true); }
@@ -350,7 +411,7 @@ ipcMain.on('ra:hover', (e, on) => {
 ipcMain.on('ra:focus', (e, on) => {
   const w = BrowserWindow.fromWebContents(e.sender);
   if (!w) return;
-  if (w === island) {
+  if (islandAlive() && w === island) {
     // The island is normally non-focusable so clicking it never steals focus; text inputs opt in.
     if (on) {
       focusRequestedAt = Date.now();
@@ -378,11 +439,11 @@ ctx.handle('log', (...a) => { dlog('[renderer]', ...a.slice(0, -1)); });
 ctx.handle('rects', (rects) => { hitRects = Array.isArray(rects) ? rects : []; return true; });
 // setFocusable() rewrites the window's extended style, so re-assert click-through state afterwards.
 function applyIgnore() {
-  if (!island) return;
+  if (!islandAlive()) return;
   if (pointerInside) island.setIgnoreMouseEvents(false); else island.setIgnoreMouseEvents(true, { forward: true });
 }
 function pollCursor() {
-  if (!island || !island.isVisible() || softHidden) return;
+  if (!islandAlive() || !island.isVisible() || softHidden) return;
   const p = screen.getCursorScreenPoint();
   const b = island.getBounds();
   const x = p.x - b.x, y = p.y - b.y;
@@ -439,7 +500,7 @@ ctx.handle('quit', () => quit());
 settings.onChange((p, v) => {
   if (p === 'lang') { i18n.setLang(v); rebuildTrayMenu(); }
   if (p.startsWith('appearance.size') || p.startsWith('appearance.monitor')) placeIsland();
-  if (p === 'capture.hideFromCapture') for (const w of [island, lyricsWin, pillWin]) if (w) w.setContentProtection(!!v);
+  if (p === 'capture.hideFromCapture') for (const w of [island, lyricsWin, pillWin]) if (w && !w.isDestroyed()) w.setContentProtection(!!v);
   if (p === 'capture.shortcut') registerCaptureShortcut();
   if (p === 'autostart') setAutostart(v);
   if (p.startsWith('behaviour')) { applyVisibility(true); rebuildTrayMenu(); }
@@ -500,6 +561,9 @@ function loadFeatures() {
 }
 
 function quit() {
+  if (quitting) return;
+  quitting = true;
+  evlog('quit');
   bus.emit('quit');
   settings.flush(); data.flush();
   if (ctx.sys) ctx.sys.stop();
@@ -509,8 +573,17 @@ function quit() {
 }
 
 let agents = null;
-app.on('second-instance', (e, argv) => { dlog('second-instance'); if ((argv || []).some((a) => a.startsWith('--listen-test='))) return; try { openSettings(); } catch (err) { errlog('openSettings', err); } });
+// Launching RA again while it runs brings the island back (and opens Settings, like before).
+app.on('second-instance', (e, argv) => {
+  dlog('second-instance');
+  if ((argv || []).some((a) => a.startsWith('--listen-test='))) return;
+  restoreIsland('second launch');
+  try { openSettings(); } catch (err) { errlog('openSettings', err); }
+});
 app.on('window-all-closed', (e) => { /* keep running in tray */ });
+app.on('before-quit', () => { quitting = true; });
+app.on('render-process-gone', (e, wc, d) => { if (!islandAlive() || wc !== island.webContents) evlog(`renderer gone (${d.reason})`); });
+app.on('child-process-gone', (e, d) => evlog(`child process gone: ${d.type} ${d.reason}`));
 
 app.whenReady().then(() => {
   if (process.argv.includes('--install-shortcuts')) { ensureShortcuts(); }
