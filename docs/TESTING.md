@@ -1,6 +1,6 @@
 # RA Assistant – checklist pengujian (QA)
 
-Versi: **0.2.2** · Diuji: 16 Nov 2026 · Windows 11 Home 26300 · laptop pengembang (1920×1080).
+Versi: **0.2.3** · Diuji: 17 Nov 2026 · Windows 11 Home 26300 · laptop pengembang (1920×1080).
 
 Status: ✅ lulus · ⚠️ lulus dengan catatan · ❌ gagal · ⏭️ belum diuji di putaran ini (lulus di putaran sebelumnya).
 
@@ -9,7 +9,7 @@ Status: ✅ lulus · ⚠️ lulus dengan catatan · ❌ gagal · ⏭️ belum di
 | Perintah | Cakupan | Hasil |
 | --- | --- | --- |
 | `npm test` | 33 unit test: jadwal sholat vs **jadwal resmi Kemenag** (Jakarta & Makassar, 4 musim), urutan waktu & Imsak, kota bawaan, Hijriah; libur nasional 2026 vs SKB 3 Menteri; iCal (all-day, batal, link rapat, RRULE mingguan); OTP (ID/EN) & bukan-OTP; parsing notifikasi; hapus clipboard saat reboot; teks mirip OTP tidak disimpan; parsing LRC; pembersihan judul YouTube & kueri lirik; agregasi waktu layar (tengah malam, kunci/tidur, gabung aplikasi, pangkas 14 hari); parser sesi Copilot (ask_user, izin, baris terpotong, JSON rusak); jenis perangkat Bluetooth dari class-of-device/kategori/nama (headphone, TWS, speaker, mouse, keyboard, stik game, ponsel, BLE); jenis PnP & pengabaian HID Bluetooth/disk internal; diff + ringkas satu notifikasi per colokan (huruf drive, kabel charge-only); jenis koneksi monitor (HDMI, DP/USB‑C, internal); parsing `netsh wlan` (tersambung, terputus, fallback nama profil) | ✅ 33/33 |
-| `npm run qa:lifecycle` | Island bertahan dari WM_CLOSE (Alt+F4 / "End task"), renderer dimatikan paksa, peluncuran kedua (tetap 1 instance), menutup jendela Pengaturan | ✅ 6/6 (dev & versi terpasang) |
+| `npm run qa:lifecycle` | Island bertahan dari WM_CLOSE (Alt+F4 / "End task"), renderer dimatikan paksa, peluncuran kedua (tetap 1 instance), menutup jendela Pengaturan; **tanpa tombol taskbar** saat mulai, saat island difokus (mengetik), setelah dibuat ulang & setelah peluncuran kedua; versi terpasang yang memegang island (bukan salinan dev); tidak ada task logon lama | ✅ 13/13 versi terpasang (0.2.2 lama: 8/13 → bug terdeteksi) |
 | `RA Assistant.exe --qa-stress` (saat RA berjalan) | 2.700 notifikasi/OSD/status agen, ganti bahasa ×2; mencatat memori & jumlah listener ke `events.log` | ✅ tanpa kebocoran (lihat bawah) |
 | `RA Assistant.exe --qa-devices` | Memutar 11 animasi perangkat dan menyimpan bingkainya ke `%TEMP%\ra_dv` (bisa saat layar terkunci) | ✅ 11/11 (dev & terpasang) |
 | `RA Assistant.exe --qa-tabs` | Membuka semua tab island satu per satu, bingkai ke `%TEMP%\ra_tabs` | ✅ 10/10 tab tampil dengan data |
@@ -39,6 +39,13 @@ Status: ✅ lulus · ⚠️ lulus dengan catatan · ❌ gagal · ⏭️ belum di
 | 13 | Notifikasi pendek yang antre saat panel terbuka tampil basi beberapa menit kemudian | Notifikasi perangkat kedaluwarsa setelah 12 dtk & tidak ditahan saat Fokus/Rapat |
 | 14 | Saat Wi‑Fi putus, notifikasi "Internet terputus" bertumpuk dengan animasi Wi‑Fi | Notifikasi internet ditunda 4,5 dtk & dilewati bila animasi Wi‑Fi baru saja tampil |
 
+### Putaran 0.2.3
+
+| # | Bug | Perbaikan |
+| --- | --- | --- |
+| 15 | Island **masih muncul di taskbar** (perbaikan 0.2.1 belum cukup): `skipTaskbar` Electron hanya memakai `ITaskbarList::DeleteTab`, yang bisa dikembalikan Explorer | Island, pil timer & overlay lirik kini *tool window* (`WS_EX_TOOLWINDOW`), sehingga Windows tidak pernah memberinya tombol taskbar / Alt+Tab |
+| 16 | Task Scheduler lama "RA Assistant AutoStart" (dari versi kode sumber awal) menjalankan **salinan dev** saat logon; versi terpasang lalu keluar diam-diam sebagai instance kedua → "aplikasinya hilang" | Task dihapus; versi terpasang menghapusnya otomatis bila masih ada; instance kedua & setiap keluar proses kini tercatat di `events.log` |
+
 ## Ketahanan & sumber daya (versi terpasang)
 
 | Item | Hasil |
@@ -52,7 +59,7 @@ Status: ✅ lulus · ⚠️ lulus dengan catatan · ❌ gagal · ⏭️ belum di
 
 | Item | Hasil |
 | --- | --- |
-| Build `npm run dist` → `dist\RA Assistant Setup 0.2.2.exe` (±109 MB, x64, NSIS, per-user, tanpa admin) | ✅ |
+| Build `npm run dist` → `dist\RA Assistant Setup 0.2.3.exe` (±109 MB, x64, NSIS, per-user, tanpa admin) | ✅ |
 | Pasang (biasa & `/S`), pintasan Start Menu + Desktop → `RA Assistant.exe` | ✅ |
 | Pintasan lama versi dev (`electron.exe <folder>`) diarahkan ulang; hanya satu RA yang jalan | ✅ |
 | Aplikasi terpasang: island, Pengaturan, tab Ibadah (cocok Kemenag hari itu), Minum, ganti bahasa, helper PowerShell dari `app.asar.unpacked`, transkripsi Dengar, pembuatan `.vsix` ekstensi editor | ✅ |

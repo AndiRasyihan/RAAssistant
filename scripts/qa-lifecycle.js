@@ -17,8 +17,12 @@ using System;using System.Text;using System.Runtime.InteropServices;
 public class QW{public delegate bool P(IntPtr h,IntPtr l);[DllImport("user32.dll")]public static extern bool EnumWindows(P p,IntPtr l);
 [DllImport("user32.dll")]public static extern int GetWindowThreadProcessId(IntPtr h,out int p);[DllImport("user32.dll")]public static extern bool IsWindowVisible(IntPtr h);
 [DllImport("user32.dll")]public static extern int GetWindowText(IntPtr h,StringBuilder s,int n);[DllImport("user32.dll")]public static extern IntPtr PostMessage(IntPtr h,int m,IntPtr w,IntPtr l);
-public static IntPtr Find(int pid){IntPtr f=IntPtr.Zero;EnumWindows((h,l)=>{int p;GetWindowThreadProcessId(h,out p);var s=new StringBuilder(64);GetWindowText(h,s,64);if(p==pid&&IsWindowVisible(h)&&s.ToString()=="RA Assistant"){f=h;return false;}return true;},IntPtr.Zero);return f;}}
+[DllImport("user32.dll",EntryPoint="GetWindowLongPtrW")]public static extern IntPtr GWL(IntPtr h,int i);
+public static IntPtr Find(int pid){IntPtr f=IntPtr.Zero;EnumWindows((h,l)=>{int p;GetWindowThreadProcessId(h,out p);var s=new StringBuilder(64);GetWindowText(h,s,64);if(p==pid&&IsWindowVisible(h)&&s.ToString()=="RA Assistant"){f=h;return false;}return true;},IntPtr.Zero);return f;}
+public static bool NoTaskbar(IntPtr h){long ex=(long)GWL(h,-20);return (ex&0x80)!=0&&(ex&0x40000)==0;}}
 "@`;
+// WS_EX_TOOLWINDOW without WS_EX_APPWINDOW = Windows never shows a taskbar button for the window.
+function noTaskbar(pid) { const h = islandHwnd(pid); return !!h && ps(`${WIN}; [QW]::NoTaskbar([IntPtr]${h})`) === 'True'; }
 
 function mainPid() {
   const out = ps(`${MAIN} | % ProcessId`);
@@ -41,6 +45,21 @@ async function waitIsland(pid, ms = 15000) {
   const pid = mainPid();
   if (!pid) { console.log('RA Assistant is not running'); process.exit(2); }
   check('island present at start', await waitIsland(pid));
+  check('no taskbar button at start', noTaskbar(pid));
+  const installedExe = path.join(process.env.LOCALAPPDATA, 'Programs', 'RA Assistant', 'RA Assistant.exe');
+  if (fs.existsSync(installedExe)) {
+    check('installed app owns the island (not a stale dev copy)', ps(`${MAIN} | % Name`) === 'RA Assistant.exe');
+    check('no legacy logon task', ps(`(Get-ScheduledTask -TaskName 'RA Assistant AutoStart' -ErrorAction SilentlyContinue | Measure-Object).Count`) === '0');
+  }
+
+  // 0. Typing in the island makes it focusable (the path that used to add a taskbar button).
+  const runningExe = ps(`${MAIN} | % ExecutablePath`);
+  const appArgs = /electron\.exe$/i.test(runningExe) ? [path.join(__dirname, '..')] : [];
+  spawn(runningExe, [...appArgs, '--qa-focus'], { detached: true, stdio: 'ignore' }).unref();
+  await sleep(1200);
+  check('no taskbar button while island is focused', noTaskbar(pid));
+  await sleep(2500);
+  check('no taskbar button after focus ends', noTaskbar(pid));
 
   // 1. WM_CLOSE, like Alt+F4 or Task Manager "End task".
   ps(`${WIN}; [QW]::PostMessage([IntPtr]${islandHwnd(pid)}, 0x10, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null`);
@@ -51,6 +70,7 @@ async function waitIsland(pid, ms = 15000) {
   for (const r of rendererPid()) ps(`Stop-Process -Id ${r} -Force -ErrorAction SilentlyContinue`);
   await sleep(1000);
   check('island recreated after renderer killed', await waitIsland(pid, 20000) && mainPid() === pid);
+  check('no taskbar button after recreate', noTaskbar(pid));
 
   // 3. Second launch restores it and keeps a single instance (uses the same build that is running).
   const installed = path.join(process.env.LOCALAPPDATA, 'Programs', 'RA Assistant', 'RA Assistant.exe');
@@ -63,6 +83,7 @@ async function waitIsland(pid, ms = 15000) {
     const mains = ps(`(${MAIN} | Measure-Object).Count`);
     check('second launch keeps one instance', +mains === 1, mains + ' main process(es)');
     check('island present after second launch', await waitIsland(pid));
+    check('no taskbar button after second launch', noTaskbar(pid));
     // 4. Closing the Settings window (opened by the second launch) leaves the island alone.
     const closed = ps(`${WIN.replace('s.ToString()=="RA Assistant"', 's.ToString()!="RA Assistant"&&s.Length>0')}; $h=[QW]::Find(${pid}); if($h -ne [IntPtr]::Zero){[QW]::PostMessage($h,0x10,[IntPtr]::Zero,[IntPtr]::Zero)|Out-Null; 'y'}`);
     await sleep(2000);

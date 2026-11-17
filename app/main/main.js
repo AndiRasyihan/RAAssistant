@@ -18,7 +18,11 @@ app.commandLine.appendSwitch('use-angle', 'd3d11');
 if (!process.argv.includes('--gpu')) app.disableHardwareAcceleration();
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
-if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
+if (!app.requestSingleInstanceLock()) {
+  // Another copy owns the island; record which exe handed off so "it vanished" reports are diagnosable.
+  try { fs.appendFileSync(path.join(app.getPath('userData'), 'events.log'), `${new Date().toISOString()} second instance (${path.basename(process.execPath)}) -> handed off, exiting\n`); } catch {}
+  app.quit(); process.exit(0);
+}
 
 const DEBUG_LOG = process.env.RA_DEBUG ? require('path').join(require('os').tmpdir(), 'ra_debug.log') : null;
 function dlog(...a) { if (DEBUG_LOG) try { require('fs').appendFileSync(DEBUG_LOG, new Date().toISOString().slice(11, 23) + ' ' + a.map((x) => typeof x === 'string' ? x : JSON.stringify(x)).join(' ') + '\n'); } catch {} }
@@ -32,8 +36,10 @@ function errlog(where, e) {
   } catch {}
   dlog('ERR', where, String(e && e.stack || e));
 }
-process.on('uncaughtException', (e) => errlog('uncaught', e));
+process.on('uncaughtException', (e) => { errlog('uncaught', e); evlog('uncaught exception: ' + (e && e.message)); });
 process.on('unhandledRejection', (e) => errlog('unhandled', e));
+// Every way the main process ends leaves a line in events.log.
+process.on('exit', (code) => { let q = false; try { q = quitting; } catch {} evlog(`process exit (code ${code}, ${q ? 'requested' : 'UNEXPECTED'}, ${path.basename(process.execPath)})`); });
 
 const ROOT = path.join(__dirname, '..');
 const APP_DIR = path.join(ROOT, '..');
@@ -158,6 +164,9 @@ function recreateIsland(reason) {
 
 function createIsland() {
   island = new BrowserWindow({
+    // 'toolbar' = WS_EX_TOOLWINDOW: Windows never gives it a taskbar button or Alt+Tab entry. skipTaskbar alone
+    // (ITaskbarList::DeleteTab) is not durable: Explorer re-adds the button after some show/focus changes.
+    type: 'toolbar',
     width: BASE_W, height: BASE_H, frame: false, transparent: true, resizable: false, movable: false,
     skipTaskbar: true, alwaysOnTop: true, hasShadow: false, show: false, focusable: false, fullscreenable: false,
     minimizable: false, maximizable: false, backgroundColor: '#00000000', title: 'RA Assistant',
@@ -326,6 +335,7 @@ function updateLyricsOverlay() {
   if (want && !lyricsWin) {
     const d = targetDisplay();
     lyricsWin = new BrowserWindow({
+      type: 'toolbar',
       width: 900, height: 100, x: Math.round(d.bounds.x + (d.bounds.width - 900) / 2), y: d.bounds.y + 6,
       frame: false, transparent: true, resizable: false, skipTaskbar: true, focusable: false, alwaysOnTop: true,
       hasShadow: false, show: false, backgroundColor: '#00000000', webPreferences: webPrefs()
@@ -347,6 +357,7 @@ function openPill(open) {
   if (pillWin) return;
   const d = targetDisplay();
   pillWin = new BrowserWindow({
+    type: 'toolbar',
     width: 190, height: 54, x: d.workArea.x + d.workArea.width - 230, y: d.workArea.y + 90, frame: false, transparent: true,
     resizable: false, skipTaskbar: true, alwaysOnTop: true, hasShadow: false, focusable: false, backgroundColor: '#00000000',
     webPreferences: webPrefs()
@@ -388,6 +399,17 @@ function healShortcuts() {
   const want = !!settings.get('autostart'), has = fs.existsSync(p.startup);
   if (want !== has || (has && shortcutStale(p.startup))) { evlog(`sync autostart shortcut (want ${want}, had ${has})`); setAutostart(want); }
   cleanStrayShortcut();
+  removeLegacyTask();
+}
+// Early source-only builds registered a logon task that starts the repo copy (node_modules\electron). It wins the
+// single-instance race at logon, so the installed app exits and the stale dev copy owns the island.
+function removeLegacyTask() {
+  const { execFile } = require('child_process');
+  const TN = 'RA Assistant AutoStart';
+  execFile('schtasks.exe', ['/Query', '/TN', TN, '/XML'], { windowsHide: true }, (err, out) => {
+    if (err || !/node_modules\\electron\\dist\\electron\.exe/i.test(out || '')) return;
+    execFile('schtasks.exe', ['/Delete', '/TN', TN, '/F'], { windowsHide: true }, (e2) => evlog(e2 ? 'legacy logon task: delete failed' : 'legacy logon task removed'));
+  });
 }
 function ensureShortcuts() {
   const p = shortcutPaths();
@@ -658,6 +680,11 @@ app.on('second-instance', (e, argv) => {
   dlog('second-instance');
   if ((argv || []).some((a) => a.startsWith('--listen-test='))) return;
   if ((argv || []).includes('--qa-stress')) { qaStress().catch((err) => errlog('qa', err)); return; }
+  if ((argv || []).includes('--qa-focus')) {
+    // Same path as clicking a text field in the island: focusable on, then off.
+    if (islandAlive()) { setIslandFocusable(true); applyIgnore(); setTimeout(() => { if (islandAlive()) { setIslandFocusable(false); applyIgnore(); } }, 2000); }
+    return;
+  }
   const qs = (argv || []).find((a) => a.startsWith('--qa-settings='));
   if ((argv || []).includes('--qa-tabs')) {
     // Opens every island tab in turn and saves a frame of each to %TEMP%\ra_tabs\<tab>.png.
